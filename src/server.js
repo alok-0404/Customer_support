@@ -44,6 +44,7 @@ import configRoutes from './routes/config.routes.js';
 import updatesRoutes from './routes/updates.routes.js';
 import whatsappRoutes from './routes/whatsapp.routes.js';
 import healthRoutes from './routes/health.routes.js';
+import whatsappIntentsRoutes from './routes/whatsappIntents.routes.js';
 
 // Import middleware
 import { notFound, errorHandler } from './middlewares/error.js';
@@ -78,6 +79,7 @@ app.use('/api', apiRateLimit);
 app.use('/api/contact', contactRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/updates', updatesRoutes);
+app.use('/api/whatsapp-intents', whatsappIntentsRoutes);
 app.use('/go/whatsapp', whatsappRoutes);
 app.use('/healthz', healthRoutes);
 

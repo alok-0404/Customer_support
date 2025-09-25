@@ -19,6 +19,10 @@ const whatsAppIntentSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  userId: {
+    type: String,
+    trim: true
+  },
   ipAddress: {
     type: String,
     trim: true
