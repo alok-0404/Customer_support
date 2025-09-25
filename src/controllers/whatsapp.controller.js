@@ -19,12 +19,14 @@ export const redirectToWhatsApp = async (req, res, next) => {
     const targetNumber = req.query.number;
     const prefilledText = req.query.text;
     const source = req.query.source;
+    const userId = req.query.userId;
 
     // Persist minimal intent log
     await WhatsAppIntent.create({
       targetNumber,
       prefilledText,
       source,
+      userId,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       referer: req.get('referer')
@@ -45,6 +47,7 @@ export const smartRedirectPage = async (req, res, next) => {
     let backup = req.query.backup; // optional (string or array)
     const prefilledText = req.query.text; // optional
     const source = req.query.source; // optional
+    const userId = req.query.userId; // optional
     const timeoutMs = Math.min(Math.max(parseInt(req.query.timeoutMs || '3000'), 1000), 10000);
 
     // Persist minimal intent log
@@ -52,6 +55,7 @@ export const smartRedirectPage = async (req, res, next) => {
       targetNumber,
       prefilledText,
       source,
+      userId,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       referer: req.get('referer')
@@ -136,12 +140,14 @@ export const redirectToWaShortLink = async (req, res, next) => {
   try {
     const rawUrl = req.query.url;
     const source = req.query.source;
+    const userId = req.query.userId;
 
     // Persist minimal intent log (store URL in targetNumber field for reuse)
     await WhatsAppIntent.create({
       targetNumber: rawUrl,
       prefilledText: undefined,
       source,
+      userId,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       referer: req.get('referer')
