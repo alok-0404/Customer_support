@@ -5,7 +5,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { validate } from '../middlewares/validate.js';
-import { redirectToWhatsApp, smartRedirectPage } from '../controllers/whatsapp.controller.js';
+import { redirectToWhatsApp, smartRedirectPage, redirectToWaShortLink } from '../controllers/whatsapp.controller.js';
 
 const router = express.Router();
 
@@ -34,6 +34,17 @@ const smartQuerySchema = z.object({
 
 // GET /go/whatsapp/smart?number=...&backup=...&text=...&timeoutMs=3000
 router.get('/smart', validate(smartQuerySchema), smartRedirectPage);
+
+// Accept a WhatsApp link and redirect
+const linkQuerySchema = z.object({
+  query: z.object({
+    url: z.string().url('Valid URL is required').refine(u => /^(https?:\/\/)?(wa\.link|wa\.me|api\.whatsapp\.com)\//.test(u), 'URL must be a WhatsApp link'),
+    source: z.string().max(100).optional()
+  })
+});
+
+// GET /go/whatsapp/link?url=...&source=...
+router.get('/link', validate(linkQuerySchema), redirectToWaShortLink);
 
 export default router;
 
