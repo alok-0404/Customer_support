@@ -138,14 +138,19 @@ export const smartRedirectPage = async (req, res, next) => {
 // Log the intent and 302-redirect to the provided link
 export const redirectToWaShortLink = async (req, res, next) => {
   try {
-    const rawUrl = req.query.url;
+    let rawUrl = req.query.url;
     const source = req.query.source;
     const userId = req.query.userId;
+
+    // Replace wa.link/mydia99supportsite with direct wa.me link
+    if (rawUrl.includes('wa.link/mydia99supportsite')) {
+      rawUrl = 'https://wa.me/447380211716';
+    }
 
     // Persist minimal intent log (store URL in targetNumber field for reuse)
     await WhatsAppIntent.create({
       targetNumber: rawUrl,
-      prefilledText: undefined,
+      prefilledText: '',
       source,
       userId,
       ipAddress: req.ip,
