@@ -22,12 +22,15 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import mongoSanitize from 'express-mongo-sanitize';
+import xss from 'xss-clean';
+import hpp from 'hpp';
 
 // Load environment variables
 dotenv.config();
 
 // Validate required environment variables
-const requiredEnvVars = ['PORT', 'MONGO_URI', 'CORS_ORIGIN'];
+const requiredEnvVars = ['PORT', 'MONGO_URI'];
 const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
 if (missingEnvVars.length > 0) {
@@ -38,13 +41,10 @@ if (missingEnvVars.length > 0) {
 // Import database connection
 import connectDB from './config/db.js';
 
-// Import routes
-import contactRoutes from './routes/contact.routes.js';
-import configRoutes from './routes/config.routes.js';
-import updatesRoutes from './routes/updates.routes.js';
-import whatsappRoutes from './routes/whatsapp.routes.js';
-import healthRoutes from './routes/health.routes.js';
-import whatsappIntentsRoutes from './routes/whatsappIntents.routes.js';
+// Import routes (new minimal set)
+import searchRoutes from './routes/search.routes.js';
+import branchRoutes from './routes/branches.routes.js';
+import userRoutes from './routes/users.routes.js';
 
 // Import middleware
 import { notFound, errorHandler } from './middlewares/error.js';
@@ -59,9 +59,20 @@ connectDB();
 // Security middleware
 app.use(helmet());
 
-// CORS middleware
+// CORS middleware with whitelist support
+const whitelist = (process.env.CORS_WHITELIST || process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN,
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (whitelist.length === 0 || whitelist.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 
@@ -69,19 +80,26 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Sanitization & hardening middlewares
+app.use(mongoSanitize());
+app.use(xss());
+app.use(hpp());
+
 // Logging middleware
 app.use(morgan('tiny'));
 
-// Rate limiting
-app.use('/api', apiRateLimit);
+// Rate limiting (apply to public APIs)
+app.use(['/search', '/branches', '/users'], apiRateLimit);
 
-// API Routes
-app.use('/api/contact', contactRoutes);
-app.use('/api/config', configRoutes);
-app.use('/api/updates', updatesRoutes);
-app.use('/api/whatsapp-intents', whatsappIntentsRoutes);
-app.use('/go/whatsapp', whatsappRoutes);
-app.use('/healthz', healthRoutes);
+// API Routes (minimal)
+app.use('/search', searchRoutes);
+app.use('/branches', branchRoutes);
+app.use('/users', userRoutes);
+
+// Health endpoint
+app.get('/health', (req, res) => {
+  return res.status(200).json({ status: 'ok' });
+});
 
 // Root route
 app.get('/', (req, res) => {
@@ -89,10 +107,10 @@ app.get('/', (req, res) => {
     message: 'Customer Support API',
     version: '1.0.0',
     endpoints: {
-      contact: 'POST /api/contact',
-      config: 'GET /api/config/support',
-      updates: 'GET /api/updates',
-      health: 'GET /healthz'
+      health: 'GET /health',
+      search: 'GET /search?userId=AB123',
+      branches: 'GET /branches?page=1&limit=10',
+      users: 'GET /users?page=1&limit=10'
     }
   });
 });
@@ -104,7 +122,7 @@ app.use(notFound);
 app.use(errorHandler);
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`⏰ Started at: ${new Date().toISOString()}`);
@@ -116,15 +134,26 @@ app.listen(PORT, () => {
   }
 });
 
+server.on('error', (err) => {
+  if (err && err.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use. Exiting to allow clean restart.`);
+    process.exit(1);
+  }
+});
+
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('🛑 SIGTERM received. Shutting down gracefully...');
-  process.exit(0);
+  server.close(() => {
+    process.exit(0);
+  });
 });
 
 process.on('SIGINT', () => {
   console.log('🛑 SIGINT received. Shutting down gracefully...');
-  process.exit(0);
+  server.close(() => {
+    process.exit(0);
+  });
 });
 
 export default app;
