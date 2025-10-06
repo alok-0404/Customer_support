@@ -11,7 +11,7 @@ export const listUsers = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     const [items, total] = await Promise.all([
-      User.find({}).populate('branchId').sort({ createdAt: -1 }).skip(skip).limit(limit),
+      User.find({}).sort({ createdAt: -1 }).skip(skip).limit(limit),
       User.countDocuments({})
     ]);
 

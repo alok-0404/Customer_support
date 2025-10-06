@@ -30,7 +30,7 @@ import hpp from 'hpp';
 dotenv.config();
 
 // Validate required environment variables
-const requiredEnvVars = ['PORT', 'MONGO_URI'];
+const requiredEnvVars = ['PORT', 'MONGO_URI', 'JWT_ACCESS_SECRET'];
 const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
 if (missingEnvVars.length > 0) {
@@ -45,6 +45,8 @@ import connectDB from './config/db.js';
 import searchRoutes from './routes/search.routes.js';
 import branchRoutes from './routes/branches.routes.js';
 import userRoutes from './routes/users.routes.js';
+import authRoutes from './routes/auth.routes.js';
+import adminsRoutes from './routes/admins.routes.js';
 
 // Import middleware
 import { notFound, errorHandler } from './middlewares/error.js';
@@ -89,12 +91,14 @@ app.use(hpp());
 app.use(morgan('tiny'));
 
 // Rate limiting (apply to public APIs)
-app.use(['/search', '/branches', '/users'], apiRateLimit);
+app.use(['/search', '/branches', '/users', '/auth/login', '/admins'], apiRateLimit);
 
 // API Routes (minimal)
 app.use('/search', searchRoutes);
 app.use('/branches', branchRoutes);
 app.use('/users', userRoutes);
+app.use('/auth', authRoutes);
+app.use('/admins', adminsRoutes);
 
 // Health endpoint
 app.get('/health', (req, res) => {
@@ -110,7 +114,8 @@ app.get('/', (req, res) => {
       health: 'GET /health',
       search: 'GET /search?userId=AB123',
       branches: 'GET /branches?page=1&limit=10',
-      users: 'GET /users?page=1&limit=10'
+      users: 'GET /users?page=1&limit=10',
+      auth: 'POST /auth/login, GET /auth/me, POST /auth/logout'
     }
   });
 });
