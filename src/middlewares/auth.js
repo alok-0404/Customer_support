@@ -49,6 +49,13 @@ export const requireSubAdmin = (req, res, next) => {
   next();
 };
 
+export const requireSubAdminOrRoot = (req, res, next) => {
+  if (!req.user || (req.user.role !== 'sub' && req.user.role !== 'root')) {
+    return res.status(403).json({ success: false, message: 'Sub-admin or Root access required' });
+  }
+  next();
+};
+
 export const verifyClientOwnership = async (req, res, next) => {
   try {
     const { clientId } = req.params;
