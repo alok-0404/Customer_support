@@ -112,29 +112,31 @@ export const createClient = async (req, res, next) => {
 };
 
 /**
- * List all clients of the logged-in SubAdmin
- * GET /api/clients?page=1&limit=10&search=
+ * List all clients (SubAdmin: own clients, Root: all clients)
+ * GET /api/clients?page=1&limit=10&search=&subAdminId=
  */
 export const listMyClients = async (req, res, next) => {
   try {
-    // Only SubAdmin can list their clients
-    if (req.user.role !== 'sub') {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
-    }
-
     const limit = Math.min(parseInt(req.query.limit || '10'), 100) || 10;
     const page = Math.max(parseInt(req.query.page || '1'), 1) || 1;
     const skip = (page - 1) * limit;
     const search = req.query.search || '';
+    const subAdminId = req.query.subAdminId || ''; // For Root to filter by specific SubAdmin
 
-    // Filter: Only this SubAdmin's clients
-    const filter = {
-      role: 'client',
-      parentSubAdmin: req.user.id
-    };
+    // Base filter
+    const filter = { role: 'client' };
+
+    // Role-based filtering
+    if (req.user.role === 'sub') {
+      // SubAdmin: only their own clients
+      filter.parentSubAdmin = req.user.id;
+    } else if (req.user.role === 'root') {
+      // Root: all clients, or filter by specific SubAdmin if provided
+      if (subAdminId) {
+        filter.parentSubAdmin = subAdminId;
+      }
+      // If no subAdminId, show all clients (no extra filter)
+    }
 
     // Add search filter if provided
     if (search) {
@@ -148,6 +150,7 @@ export const listMyClients = async (req, res, next) => {
 
     const [items, total] = await Promise.all([
       User.find(filter)
+        .populate('parentSubAdmin', 'userId email branchName branchWaLink') // Populate for Root view
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -168,6 +171,15 @@ export const listMyClients = async (req, res, next) => {
           isActive: client.isActive,
           branchName: client.branchName,
           branchWaLink: client.branchWaLink,
+          // Include parent SubAdmin info only for Root
+          ...(req.user.role === 'root' && client.parentSubAdmin ? {
+            parentSubAdmin: {
+              id: String(client.parentSubAdmin._id),
+              userId: client.parentSubAdmin.userId,
+              email: client.parentSubAdmin.email,
+              branchName: client.parentSubAdmin.branchName
+            }
+          } : {}),
           createdAt: client.createdAt,
           updatedAt: client.updatedAt
         })),

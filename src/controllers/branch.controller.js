@@ -34,9 +34,23 @@ export const createBranch = async (req, res, next) => {
     if (!branchId || !branchName || !waLink) {
       return res.status(400).json({ success: false, message: 'branchId, branchName, waLink are required' });
     }
-    // Ensure unique branchId
-    const exists = await Branch.findOne({ branchId });
-    if (exists) return res.status(409).json({ success: false, message: 'branchId already exists' });
+    
+    // Check for duplicate branchId or branchName
+    const existingBranch = await Branch.findOne({
+      $or: [
+        { branchId },
+        { branchName }
+      ]
+    });
+    
+    if (existingBranch) {
+      if (existingBranch.branchId === branchId) {
+        return res.status(409).json({ success: false, message: 'Branch ID already exists' });
+      }
+      if (existingBranch.branchName === branchName) {
+        return res.status(409).json({ success: false, message: 'Branch name already exists' });
+      }
+    }
 
     const branch = await Branch.create({ branchId, branchName, waLink });
     return res.status(201).json({ success: true, message: 'Branch created', data: branch });
@@ -64,12 +78,24 @@ export const updateBranch = async (req, res, next) => {
     const branch = await Branch.findById(id);
     if (!branch) return res.status(404).json({ success: false, message: 'Branch not found' });
 
+    // Check for duplicate branchId (if being changed)
     if (branchId && branchId !== branch.branchId) {
-      const exists = await Branch.findOne({ branchId });
-      if (exists) return res.status(409).json({ success: false, message: 'branchId already exists' });
+      const existingId = await Branch.findOne({ branchId });
+      if (existingId) {
+        return res.status(409).json({ success: false, message: 'Branch ID already exists' });
+      }
       branch.branchId = branchId;
     }
-    if (branchName) branch.branchName = branchName;
+    
+    // Check for duplicate branchName (if being changed)
+    if (branchName && branchName !== branch.branchName) {
+      const existingName = await Branch.findOne({ branchName });
+      if (existingName) {
+        return res.status(409).json({ success: false, message: 'Branch name already exists' });
+      }
+      branch.branchName = branchName;
+    }
+    
     if (waLink) branch.waLink = waLink;
 
     await branch.save();

@@ -4,7 +4,7 @@
  */
 
 import express from 'express';
-import { requireAuth, requireSubAdmin, verifyClientOwnership } from '../middlewares/auth.js';
+import { requireAuth, requireSubAdmin, requireSubAdminOrRoot, verifyClientOwnership } from '../middlewares/auth.js';
 import * as clientController from '../controllers/client.controller.js';
 
 const router = express.Router();
@@ -18,8 +18,8 @@ router.get('/stats', requireSubAdmin, clientController.getClientStats);
 // Create new client (SubAdmin only)
 router.post('/create', requireSubAdmin, clientController.createClient);
 
-// List all clients of current SubAdmin
-router.get('/', requireSubAdmin, clientController.listMyClients);
+// List clients (SubAdmin: own clients, Root: all clients)
+router.get('/', requireSubAdminOrRoot, clientController.listMyClients);
 
 // Get specific client (only if belongs to current SubAdmin)
 router.get('/:clientId', requireSubAdmin, verifyClientOwnership, clientController.getClient);
