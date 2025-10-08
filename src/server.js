@@ -47,6 +47,7 @@ import branchRoutes from './routes/branches.routes.js';
 import userRoutes from './routes/users.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import adminsRoutes from './routes/admins.routes.js';
+import clientsRoutes from './routes/clients.routes.js';
 
 // Import middleware
 import { notFound, errorHandler } from './middlewares/error.js';
@@ -91,7 +92,7 @@ app.use(hpp());
 app.use(morgan('tiny'));
 
 // Rate limiting (apply to public APIs)
-app.use(['/search', '/branches', '/users', '/auth/login', '/admins'], apiRateLimit);
+app.use(['/search', '/branches', '/users', '/auth/login', '/admins', '/clients'], apiRateLimit);
 
 // API Routes (minimal)
 app.use('/search', searchRoutes);
@@ -99,6 +100,7 @@ app.use('/branches', branchRoutes);
 app.use('/users', userRoutes);
 app.use('/auth', authRoutes);
 app.use('/admins', adminsRoutes);
+app.use('/clients', clientsRoutes);
 
 // Health endpoint
 app.get('/health', (req, res) => {
@@ -115,7 +117,8 @@ app.get('/', (req, res) => {
       search: 'GET /search?userId=AB123',
       branches: 'GET /branches?page=1&limit=10',
       users: 'GET /users?page=1&limit=10',
-      auth: 'POST /auth/login, GET /auth/me, POST /auth/logout'
+      auth: 'POST /auth/login, GET /auth/me, POST /auth/logout',
+      clients: 'GET /clients (SubAdmin only)'
     }
   });
 });

@@ -42,4 +42,39 @@ export const requireRoot = (req, res, next) => {
   next();
 };
 
+export const requireSubAdmin = (req, res, next) => {
+  if (!req.user || req.user.role !== 'sub') {
+    return res.status(403).json({ success: false, message: 'Sub-admin access required' });
+  }
+  next();
+};
+
+export const verifyClientOwnership = async (req, res, next) => {
+  try {
+    const { clientId } = req.params;
+
+    if (!clientId) {
+      return res.status(400).json({ success: false, message: 'Client ID is required' });
+    }
+
+    const client = await User.findOne({
+      _id: clientId,
+      role: 'client',
+      parentSubAdmin: req.user.id
+    });
+
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: 'Client not found or access denied'
+      });
+    }
+
+    req.client = client;
+    next();
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 
