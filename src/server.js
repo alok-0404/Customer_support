@@ -135,10 +135,10 @@ const server = app.listen(PORT, () => {
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`⏰ Started at: ${new Date().toISOString()}`);
   
-  if (process.env.SMTP_HOST) {
+  if (process.env.EMAIL_HOST || process.env.SMTP_HOST) {
     console.log('📧 Email notifications enabled');
   } else {
-    console.log('📧 Email notifications disabled (SMTP_HOST not configured)');
+    console.log('📧 Email notifications disabled (EMAIL_HOST not configured)');
   }
 });
 

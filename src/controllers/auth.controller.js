@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import User from '../models/User.js';
+import { sendPasswordResetEmail } from '../utils/emailService.js';
 
 const signAccessToken = (user) => {
   const secret = process.env.JWT_ACCESS_SECRET;
@@ -120,6 +122,115 @@ export const changeEmail = async (req, res) => {
   await user.save();
 
   return res.status(200).json({ success: true, message: 'Email updated', data: { email: user.email } });
+};
+
+// Forgot Password - Email bhejta hai
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim(), role: 'root' });
+    
+    const successMessage = 'If this email is registered, you will receive a password reset link';
+    
+    if (!user) {
+      return res.status(200).json({ success: true, message: successMessage });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({ success: false, message: 'Account is disabled' });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    // Development: Log token in console
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('\n🔑 Password Reset Token (Copy this for testing):');
+      console.log('Token:', resetToken);
+      console.log('Use in: POST /api/auth/reset-password');
+      console.log('Body: { "token": "' + resetToken + '", "newPassword": "YourNewPass@123" }\n');
+    }
+
+    try {
+      await sendPasswordResetEmail(user.email, resetToken, 'Admin');
+      // In development, keep token in database even after email sent (for testing)
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('✅ Email sent successfully. Token kept in database for testing.');
+      }
+      return res.status(200).json({ success: true, message: successMessage });
+    } catch (emailError) {
+      // In development, keep token even if email fails (for testing via console)
+      if (process.env.NODE_ENV === 'production') {
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+        return res.status(500).json({ success: false, message: 'Failed to send reset email' });
+      }
+      // Development: return success with token in console
+      console.log('⚠️ Email failed but token saved for testing');
+      return res.status(200).json({ success: true, message: 'Token generated (check console)' });
+    }
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    return res.status(500).json({ success: false, message: 'Something went wrong' });
+  }
+};
+
+// Reset Password - Token verify karke password update karta hai
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    
+    if (!token || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Token and new password are required' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    
+    // Debug logging
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 Reset Password Debug:');
+      console.log('Token received:', token.substring(0, 20) + '...');
+      console.log('Hashed token:', hashedToken.substring(0, 20) + '...');
+    }
+    
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() },
+      role: 'root'
+    });
+
+    if (!user) {
+      console.log('❌ User not found with token. Possible reasons:');
+      console.log('  - Token invalid or already used');
+      console.log('  - Token expired (> 1 hour)');
+      console.log('  - User role is not "root"');
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, 12);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    user.tokenVersion += 1;
+    await user.save();
+
+    return res.status(200).json({ success: true, message: 'Password reset successful. Please login' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({ success: false, message: 'Something went wrong' });
+  }
 };
 
 

@@ -24,7 +24,10 @@ const UserSchema = new mongoose.Schema(
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     tokenVersion: { type: Number, default: 0 },
     lastLoginAt: { type: Date },
-    lastLogoutAt: { type: Date }
+    lastLogoutAt: { type: Date },
+    // Password Reset fields
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date }
   },
   { timestamps: true }
 );
