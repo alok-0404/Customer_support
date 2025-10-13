@@ -118,6 +118,7 @@ app.get('/', (req, res) => {
       branches: 'GET /branches?page=1&limit=10',
       users: 'GET /users?page=1&limit=10',
       auth: 'POST /auth/login, GET /auth/me, POST /auth/logout',
+      admins: 'POST /admins (Root only)',
       clients: 'GET /clients (SubAdmin only)'
     }
   });
