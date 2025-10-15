@@ -83,7 +83,7 @@ jobs:
           # Install dependencies and start
           cd customer-support
           npm install --production
-          pm2 start ecosystem.config.js
+          pm2 start ecosystem.config.cjs
           
           # Cleanup
           rm /tmp/backend-deployment.tar.gz
