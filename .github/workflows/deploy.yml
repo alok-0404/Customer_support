@@ -21,8 +21,28 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
+        port: 22
+        timeout: 60s
+        command_timeout: 10m
         script: |
-          cd /home/ec2-user/customer-support
-          git pull origin main
-          npm install
-          pm2 restart all
+          echo "Connected to EC2 successfully!"
+          pwd
+          ls -la
+          echo "Checking if project directory exists..."
+          if [ -d "/home/ec2-user/customer-support" ]; then
+            echo "Project directory found, updating..."
+            cd /home/ec2-user/customer-support
+            git pull origin main
+            npm install
+            pm2 restart all
+            echo "Deployment completed successfully!"
+          else
+            echo "Project directory not found, creating..."
+            mkdir -p /home/ec2-user/customer-support
+            cd /home/ec2-user
+            git clone https://github.com/alok-0404/Customer_support.git customer-support
+            cd customer-support
+            npm install
+            pm2 start ecosystem.config.js
+            echo "Initial deployment completed!"
+          fi
