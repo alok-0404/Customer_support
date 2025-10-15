@@ -42,16 +42,29 @@ jobs:
         EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
         EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
       run: |
-        # Create SSH config
+        # Create SSH config with proper formatting
         mkdir -p ~/.ssh
         echo "$EC2_SSH_KEY" > ~/.ssh/ec2_key
         chmod 600 ~/.ssh/ec2_key
         
+        # Test SSH connection first
+        echo "Testing SSH connection..."
+        ssh -i ~/.ssh/ec2_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 $EC2_USERNAME@$EC2_HOST "echo 'SSH connection successful!'" || {
+          echo "SSH connection failed. Checking key format..."
+          echo "Key content preview:"
+          head -3 ~/.ssh/ec2_key
+          echo "Key permissions:"
+          ls -la ~/.ssh/ec2_key
+          exit 1
+        }
+        
         # Upload deployment package
-        scp -i ~/.ssh/ec2_key -o StrictHostKeyChecking=no backend-deployment.tar.gz $EC2_USERNAME@$EC2_HOST:/tmp/
+        echo "Uploading deployment package..."
+        scp -i ~/.ssh/ec2_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 backend-deployment.tar.gz $EC2_USERNAME@$EC2_HOST:/tmp/
         
         # Execute deployment commands
-        ssh -i ~/.ssh/ec2_key -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << 'EOF'
+        echo "Executing deployment commands..."
+        ssh -i ~/.ssh/ec2_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 $EC2_USERNAME@$EC2_HOST << 'EOF'
           echo "Starting deployment..."
           cd /home/ec2-user
           
