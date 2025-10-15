@@ -15,34 +15,66 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     
-    - name: Deploy to EC2
-      uses: appleboy/ssh-action@v0.1.5
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
       with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USERNAME }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        port: 22
-        timeout: 60s
-        command_timeout: 10m
-        script: |
-          echo "Connected to EC2 successfully!"
-          pwd
-          ls -la
-          echo "Checking if project directory exists..."
-          if [ -d "/home/ec2-user/customer-support" ]; then
-            echo "Project directory found, updating..."
-            cd /home/ec2-user/customer-support
-            git pull origin main
-            npm install
-            pm2 restart all
-            echo "Deployment completed successfully!"
-          else
-            echo "Project directory not found, creating..."
-            mkdir -p /home/ec2-user/customer-support
-            cd /home/ec2-user
-            git clone https://github.com/alok-0404/Customer_support.git customer-support
-            cd customer-support
-            npm install
-            pm2 start ecosystem.config.js
-            echo "Initial deployment completed!"
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Build backend
+      run: npm run build
+      
+    - name: Create deployment package
+      run: |
+        mkdir -p deployment-package
+        cp -r src/ deployment-package/
+        cp -r deployment/ deployment-package/
+        cp package*.json deployment-package/
+        cp ecosystem.config.js deployment-package/
+        cp production.env deployment-package/
+        tar -czf backend-deployment.tar.gz deployment-package/
+    
+    - name: Deploy to EC2 via SCP
+      env:
+        EC2_HOST: ${{ secrets.EC2_HOST }}
+        EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
+        EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+      run: |
+        # Create SSH config
+        mkdir -p ~/.ssh
+        echo "$EC2_SSH_KEY" > ~/.ssh/ec2_key
+        chmod 600 ~/.ssh/ec2_key
+        
+        # Upload deployment package
+        scp -i ~/.ssh/ec2_key -o StrictHostKeyChecking=no backend-deployment.tar.gz $EC2_USERNAME@$EC2_HOST:/tmp/
+        
+        # Execute deployment commands
+        ssh -i ~/.ssh/ec2_key -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << 'EOF'
+          echo "Starting deployment..."
+          cd /home/ec2-user
+          
+          # Stop existing PM2 processes
+          pm2 stop all || true
+          
+          # Backup existing deployment
+          if [ -d "customer-support" ]; then
+            mv customer-support customer-support-backup-$(date +%Y%m%d_%H%M%S)
           fi
+          
+          # Extract new deployment
+          tar -xzf /tmp/backend-deployment.tar.gz
+          mv deployment-package customer-support
+          
+          # Install dependencies and start
+          cd customer-support
+          npm install --production
+          pm2 start ecosystem.config.js
+          
+          # Cleanup
+          rm /tmp/backend-deployment.tar.gz
+          
+          echo "Deployment completed successfully!"
+          pm2 status
+        EOF
