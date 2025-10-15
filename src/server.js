@@ -107,7 +107,7 @@ app.get('/health', (req, res) => {
   return res.status(200).json({ 
     status: 'ok',
     timestamp: new Date().toISOString(),
-    message: 'GitHub Actions deployment successful!'
+    message: 'GitHub Actions deployment successful with SSH key fix!'
   });
 });
 
