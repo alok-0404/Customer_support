@@ -7,53 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  deploy-admin-frontend:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '18'
-        
-    - name: Install dependencies
-      run: npm install
-      
-    - name: Build frontend
-      run: npm run build
-      
-    - name: Deploy admin to S3
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      run: |
-        aws s3 sync ./dist s3://admin-customer-support-frontend-2025 --delete
-        aws cloudfront create-invalidation --distribution-id ${{ secrets.ADMIN_CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
-
-  deploy-client-frontend:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '18'
-        
-    - name: Install dependencies
-      run: npm install
-      
-    - name: Build frontend
-      run: npm run build
-      
-    - name: Deploy client to S3
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      run: |
-        aws s3 sync ./dist s3://client-support01 --delete
-        aws cloudfront create-invalidation --distribution-id ${{ secrets.CLIENT_CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+  # Frontend deployments removed - this is backend repository only
+  # Frontend should be deployed from separate repositories
 
   deploy-backend:
     runs-on: ubuntu-latest

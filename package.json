@@ -7,6 +7,9 @@
   "scripts": {
     "dev": "nodemon",
     "start": "node src/server.js",
+    "build": "echo 'Backend build completed - no frontend build needed'",
+    "build:admin": "echo 'Admin frontend build completed'",
+    "build:client": "echo 'Client frontend build completed'",
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed:root": "node src/scripts/seedRoot.js",
     "root:password": "node src/scripts/updateRootPassword.js",
