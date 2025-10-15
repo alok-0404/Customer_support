@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
     name: 'customer-support-api',
-    script: 'server.js',
+    script: 'deployment/server.js',
     instances: 'max',
     exec_mode: 'cluster',
     env: {

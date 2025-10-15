@@ -107,7 +107,7 @@ app.get('/health', (req, res) => {
   return res.status(200).json({ 
     status: 'ok',
     timestamp: new Date().toISOString(),
-    message: 'EC2 RESTARTED - Backend server starting now!'
+    message: 'Testing backend server status after multiple deployments'
   });
 });
 
