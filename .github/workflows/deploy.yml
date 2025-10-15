@@ -32,8 +32,9 @@ jobs:
         cp -r src/ deployment-package/
         cp -r deployment/ deployment-package/
         cp package*.json deployment-package/
-        cp ecosystem.config.js deployment-package/
-        cp production.env deployment-package/
+        cp ecosystem.config.cjs deployment-package/
+        # ensure .env present in deployment
+        cp production.env deployment-package/.env
         tar -czf backend-deployment.tar.gz deployment-package/
     
     - name: Deploy to EC2 via SCP
