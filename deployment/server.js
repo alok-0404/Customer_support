@@ -55,6 +55,7 @@ import { apiRateLimit } from './middlewares/rateLimit.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+console.log('🚀 Server starting on port:', PORT);
 
 // Connect to MongoDB
 connectDB();
@@ -104,7 +105,11 @@ app.use('/clients', clientsRoutes);
 
 // Health endpoint
 app.get('/health', (req, res) => {
-  return res.status(200).json({ status: 'ok' });
+  return res.status(200).json({ 
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    message: 'Backend server restarted - fixing connection issues!'
+  });
 });
 
 // Root route
