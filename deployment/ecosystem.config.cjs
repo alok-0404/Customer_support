@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
     name: 'customer-support-api',
-    script: 'deployment/server.js',
+    script: 'src/server.js',
     instances: 'max',
     exec_mode: 'cluster',
     env: {
@@ -10,7 +10,7 @@ module.exports = {
       MONGO_URI: 'mongodb+srv://techglobe0301:techglobe0301@cluster0.4k3mx4p.mongodb.net/customer_support?retryWrites=true&w=majority&appName=Cluster0',
       JWT_ACCESS_SECRET: 'your-super-secret-jwt-key-change-this-in-production-min-32-chars',
       JWT_ACCESS_EXPIRES_IN: '15m',
-      CORS_WHITELIST: 'http://localhost:3001,http://localhost:3000,http://admin-customer-support-frontend-2025.s3-website-us-east-1.amazonaws.com,https://admin-customer-support-frontend-2025.s3-website-us-east-1.amazonaws.com,http://client-support01.s3-website-us-east-1.amazonaws.com,https://client-support01.s3-website-us-east-1.amazonaws.com,http://44.221.30.127,https://44.221.30.127,http://mydiamond99adminsupport.in,https://mydiamond99adminsupport.in,http://www.mydiamond99adminsupport.in,https://www.mydiamond99adminsupport.in',
+      CORS_WHITELIST: 'http://localhost:3001,http://localhost:3000,http://admin-customer-support-frontend-2025.s3-website-us-east-1.amazonaws.com,https://admin-customer-support-frontend-2025.s3-website-us-east-1.amazonaws.com,http://client-support01.s3-website-us-east-1.amazonaws.com,https://client-support01.s3-website-us-east-1.amazonaws.com,http://44.221.30.127,https://44.221.30.127,http://mydiamond99adminsupport.in,https://mydiamond99adminsupport.in,http://www.mydiamond99adminsupport.in,https://www.mydiamond99adminsupport.in,http://mydiamond99clientsupport.in,https://mydiamond99clientsupport.in,http://www.mydiamond99clientsupport.in,https://www.mydiamond99clientsupport.in',
       EMAIL_HOST: 'smtp.sendgrid.net',
       EMAIL_PORT: '587',
       EMAIL_SECURE: 'false',
