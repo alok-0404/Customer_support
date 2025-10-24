@@ -48,6 +48,7 @@ import userRoutes from './routes/users.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import adminsRoutes from './routes/admins.routes.js';
 import clientsRoutes from './routes/clients.routes.js';
+import analyticsRoutes from './routes/analytics.routes.js';
 
 // Import middleware
 import { notFound, errorHandler } from './middlewares/error.js';
@@ -101,6 +102,7 @@ app.use('/users', userRoutes);
 app.use('/auth', authRoutes);
 app.use('/admins', adminsRoutes);
 app.use('/clients', clientsRoutes);
+app.use('/analytics', analyticsRoutes);
 
 // Health endpoint
 app.get('/health', (req, res) => {
