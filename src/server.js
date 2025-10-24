@@ -60,8 +60,25 @@ const PORT = process.env.PORT || 4000;
 // Connect to MongoDB
 connectDB();
 
-// Security middleware
-app.use(helmet());
+// Security middleware - Mobile-friendly configuration
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow external resources
+  crossOriginOpenerPolicy: false, // Allow cross-origin openers
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin resources
+}));
 
 // CORS middleware with whitelist support
 const whitelist = (process.env.CORS_WHITELIST || process.env.CORS_ORIGIN || '')
