@@ -62,19 +62,7 @@ connectDB();
 
 // Security middleware - Mobile-friendly configuration
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'", "data:"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-    },
-  },
+  contentSecurityPolicy: false, // Disable CSP for API server (CSP should be on frontend)
   crossOriginEmbedderPolicy: false, // Allow external resources
   crossOriginOpenerPolicy: false, // Allow cross-origin openers
   crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin resources
