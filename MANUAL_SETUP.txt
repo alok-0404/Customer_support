@@ -1,0 +1,70 @@
+# 🔧 Manual SSL Setup Instructions
+
+## Current Situation:
+❌ Can't SSH directly (permission issues)
+✅ Script is ready in GitHub
+✅ EC2 instance is running at: 44.221.30.127
+
+## Option 1: Use GitHub (Easiest)
+
+### On EC2 Server:
+```bash
+# 1. SSH into EC2 via AWS Console or existing access
+# 2. Clone or download the script
+wget https://raw.githubusercontent.com/alok-0404/Customer_support/main/setup-ssl.sh
+
+# 3. Make executable
+chmod +x setup-ssl.sh
+
+# 4. Run script
+./setup-ssl.sh
+```
+
+## Option 2: Use AWS Console
+
+1. Go to AWS EC2 Console
+2. Connect to instance via Session Manager or EC2 Instance Connect
+3. Run these commands:
+
+```bash
+# Install required tools
+sudo yum update -y
+sudo yum install -y nginx certbot python3-certbot-nginx
+
+# Get SSL certificate
+sudo certbot --nginx -d mydiamond99clientsupport.in -d www.mydiamond99clientsupport.in
+
+# Configure Nginx manually or use the config from nginx-ssl-config.conf
+```
+
+## Option 3: Fix SSH First
+
+If you need to fix SSH access:
+
+1. Check security group - port 22 should be open
+2. Verify key file permissions: chmod 400 customer-support-backend.pem
+3. Try: ssh -i customer-support-backend.pem ec2-user@44.221.30.127 -v
+
+## Quick Commands (If you have EC2 access):
+
+```bash
+# Install Nginx
+sudo yum install -y nginx certbot python3-certbot-nginx
+
+# Get SSL certificate
+sudo certbot --nginx -d mydiamond99clientsupport.in
+
+# Enable and start Nginx
+sudo systemctl enable nginx
+sudo systemctl start nginx
+
+# Check status
+sudo systemctl status nginx
+```
+
+## Need Help?
+
+Which option you want to use?
+1. GitHub wget (easiest)
+2. AWS Console connection
+3. Fix SSH access first
