@@ -48,6 +48,7 @@ import userRoutes from './routes/users.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import adminsRoutes from './routes/admins.routes.js';
 import clientsRoutes from './routes/clients.routes.js';
+import analyticsRoutes from './routes/analytics.routes.js';
 
 // Import middleware
 import { notFound, errorHandler } from './middlewares/error.js';
@@ -131,6 +132,7 @@ app.use('/users', userRoutes);
 app.use('/auth', authRoutes);
 app.use('/admins', adminsRoutes);
 app.use('/clients', clientsRoutes);
+app.use('/analytics', analyticsRoutes);
 
 // Health endpoint
 app.get('/health', (req, res) => {
@@ -165,8 +167,8 @@ app.use(notFound);
 app.use(errorHandler);
 
 // Start server
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`⏰ Started at: ${new Date().toISOString()}`);
   
