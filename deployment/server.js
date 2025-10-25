@@ -67,7 +67,7 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin resources
 }));
 
-// CORS middleware with whitelist support
+// CORS middleware with flexible origin support
 const whitelist = (process.env.CORS_WHITELIST || process.env.CORS_ORIGIN || '')
   .split(',')
   .map(s => s.trim())
@@ -75,13 +75,29 @@ const whitelist = (process.env.CORS_WHITELIST || process.env.CORS_ORIGIN || '')
 
 app.use(cors({
   origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, Postman, or curl)
     if (!origin) return callback(null, true);
-    if (whitelist.length === 0 || whitelist.includes(origin)) {
-      return callback(null, true);
+    
+    // If whitelist is empty, allow all origins
+    if (whitelist.length === 0) return callback(null, true);
+    
+    // Check exact match in whitelist
+    if (whitelist.includes(origin)) return callback(null, true);
+    
+    // Allow both http and https versions of IP addresses and domains
+    const originWithoutProtocol = origin.replace(/^https?:\/\//, '');
+    for (const allowed of whitelist) {
+      const allowedWithoutProtocol = allowed.replace(/^https?:\/\//, '');
+      if (originWithoutProtocol === allowedWithoutProtocol) {
+        return callback(null, true);
+      }
     }
+    
     return callback(new Error('Not allowed by CORS'));
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Request parsing middleware
