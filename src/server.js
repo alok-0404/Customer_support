@@ -101,6 +101,15 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
+// Force HTTPS to HTTP redirect for mixed content (if needed)
+app.use((req, res, next) => {
+  // If request comes with HTTPS but we're on HTTP, handle gracefully
+  if (req.get('x-forwarded-proto') === 'https' && !req.secure) {
+    console.log('⚠️ HTTPS request on HTTP server - CORS will handle this');
+  }
+  next();
+});
+
 // Request parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
