@@ -79,21 +79,32 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps, Postman, or curl)
     if (!origin) return callback(null, true);
     
+    console.log('🔍 CORS Request from origin:', origin);
+    
     // If whitelist is empty, allow all origins
-    if (whitelist.length === 0) return callback(null, true);
+    if (whitelist.length === 0) {
+      console.log('✅ CORS: Whitelist empty, allowing all origins');
+      return callback(null, true);
+    }
     
     // Check exact match in whitelist
-    if (whitelist.includes(origin)) return callback(null, true);
+    if (whitelist.includes(origin)) {
+      console.log('✅ CORS: Origin matched in whitelist');
+      return callback(null, true);
+    }
     
     // Allow both http and https versions of IP addresses and domains
     const originWithoutProtocol = origin.replace(/^https?:\/\//, '');
     for (const allowed of whitelist) {
       const allowedWithoutProtocol = allowed.replace(/^https?:\/\//, '');
       if (originWithoutProtocol === allowedWithoutProtocol) {
+        console.log('✅ CORS: Origin matched (without protocol)');
         return callback(null, true);
       }
     }
     
+    console.log('❌ CORS: Origin not allowed:', origin);
+    console.log('📋 Whitelist:', whitelist);
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
