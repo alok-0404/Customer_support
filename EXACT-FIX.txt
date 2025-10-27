@@ -1,0 +1,16 @@
+eEC2 PAR YE COMMANDS:
+
+# 1. Pehle ye file dekh lo ki kya hai:
+sudo cat /etc/nginx/sites-enabled/default
+
+# 2. Output paste karo, phir main exact fix de dunga
+
+# Ya seedha ye command se fix karo:
+sudo sed -i '/location \//i\    location /api/ {\n        proxy_pass http://localhost:4000;\n        proxy_http_version 1.1;\n        proxy_set_header Upgrade $http_upgrade;\n        proxy_set_header Connection upgrade;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto $scheme;\n        proxy_cache_bypass $http_upgrade;\n        rewrite ^/api/(.*)$ /$1 break;\n    }\n' /etc/nginx/sites-enabled/default
+
+# 3. Reload:
+sudo nginx -t && sudo systemctl reload nginx
+
+# 4. Test:
+curl https://mydiamond99clientsupport.in/api/health
+

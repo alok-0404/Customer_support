@@ -1,0 +1,41 @@
+# EC2 PAR YE 4 COMMANDS SEQUENTIALLY RUN KARO:
+
+# STEP 1: Find ALL duplicate configs
+sudo find /etc/nginx -name "*mydiamond99*" -type f
+
+# STEP 2: Remove ALL old configs (this will show what exists)
+sudo rm -f /etc/nginx/sites-enabled/mydiamond99clientsupport.in
+sudo rm -f /etc/nginx/sites-enabled/*mydiamond99*
+sudo rm -f /etc/nginx/sites-available/mydiamond99clientsupport.in
+
+# STEP 3: Create FRESH config
+sudo tee /etc/nginx/sites-available/mydiamond99clientsupport.in > /dev/null << 'NGINXEOF'
+server {
+    listen 80;
+    server_name mydiamond99clientsupport.in;
+
+    location /api/ {
+        proxy_pass http://localhost:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        rewrite ^/api/(.*)$ /$1 break;
+    }
+
+    location / {
+        root /var/www/html;
+        try_files $uri $uri/ /index.html;
+    }
+}
+NGINXEOF
+
+# STEP 4: Enable and test
+sudo ln -s /etc/nginx/sites-available/mydiamond99clientsupport.in /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+curl https://mydiamond99clientsupport.in/api/health
+
