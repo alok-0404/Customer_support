@@ -57,6 +57,9 @@ import { apiRateLimit } from './middlewares/rateLimit.js';
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Trust proxy - Required for nginx reverse proxy
+app.set('trust proxy', 1);
+
 // Connect to MongoDB
 connectDB();
 

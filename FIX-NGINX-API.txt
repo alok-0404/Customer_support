@@ -1,0 +1,54 @@
+# EC2 Par Nginx Config Fix
+
+## Problem:
+curl https://mydiamond99clientsupport.in/api/health
+# Frontend HTML return ho raha hai instead of backend JSON
+
+## Solution: Correct Nginx Config
+
+Yeh commands EC2 par run karo:
+
+1. Check current config:
+sudo cat /etc/nginx/sites-available/mydiamond99clientsupport.in
+
+2. Edit config:
+sudo nano /etc/nginx/sites-available/mydiamond99clientsupport.in
+
+3. Config should look like this (IMPORTANT: location /api BEFORE location /):
+
+server {
+    listen 80;
+    server_name mydiamond99clientsupport.in;
+
+    # API Proxy (MUST BE BEFORE location /)
+    location /api/ {
+        proxy_pass http://localhost:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        
+        # Remove /api prefix when forwarding
+        rewrite ^/api/(.*)$ /$1 break;
+    }
+
+    # Frontend (existing)
+    location / {
+        root /var/www/html;
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+4. Save and reload:
+sudo nginx -t
+sudo systemctl reload nginx
+
+5. Test:
+curl https://mydiamond99clientsupport.in/api/health
+
+Expected: JSON response, not HTML
+
