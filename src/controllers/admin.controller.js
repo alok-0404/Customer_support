@@ -15,9 +15,9 @@ const findBranchByAnyId = async (idOrCode) => {
 };
 
 export const createSubAdmin = async (req, res) => {
-  const { email, password, userId, branchId, isActive = true, permissions = [] } = req.body || {};
-  if (!email || !password || !userId || !branchId) {
-    return res.status(400).json({ success: false, message: 'email, password, userId, branchId are required' });
+  const { email, password, userId, branchId, waLink, isActive = true, permissions = [] } = req.body || {};
+  if (!email || !password || !userId) {
+    return res.status(400).json({ success: false, message: 'email, password, userId are required' });
   }
 
   const normalizedEmail = String(email).toLowerCase().trim();
@@ -25,16 +25,22 @@ export const createSubAdmin = async (req, res) => {
   const exists = await User.findOne({ email: normalizedEmail });
   if (exists) return res.status(409).json({ success: false, message: 'Email already in use' });
 
-  const branch = await findBranchByAnyId(branchId);
-  if (!branch) return res.status(400).json({ success: false, message: 'Invalid branchId' });
+  let branch = null;
+  if (!waLink && branchId) {
+    branch = await findBranchByAnyId(branchId);
+    if (!branch) return res.status(400).json({ success: false, message: 'Invalid branchId' });
+  }
 
   const passwordHash = await bcrypt.hash(password, 12);
 
   const sub = await User.create({
     userId,
-    branchId: branch._id,
-    branchName: branch.branchName,
-    branchWaLink: branch.waLink,
+    // If waLink provided directly, prefer that and do not require branchId
+    ...(waLink
+      ? { branchWaLink: waLink }
+      : branch
+        ? { branchId: branch._id, branchName: branch.branchName, branchWaLink: branch.waLink }
+        : {}),
     email: normalizedEmail,
     passwordHash,
     role: 'sub',
@@ -54,8 +60,8 @@ export const createSubAdmin = async (req, res) => {
       role: sub.role,
       isActive: sub.isActive,
       userId: sub.userId,
-      branchId: String(sub.branchId),
-      branchName: sub.branchName,
+      branchId: sub.branchId ? String(sub.branchId) : null,
+      branchName: sub.branchName || null,
       branchWaLink: sub.branchWaLink,
       createdBy: sub.createdBy,
       permissions: sub.permissions || [],
@@ -107,7 +113,7 @@ export const listSubAdmins = async (req, res) => {
 
 export const updateSubAdmin = async (req, res) => {
   const { id } = req.params;
-  const { isActive, permissions, branchId } = req.body || {};
+  const { isActive, permissions, branchId, waLink } = req.body || {};
 
   const sub = await User.findOne({ _id: id, role: 'sub', createdBy: req.user.id });
   if (!sub) return res.status(404).json({ success: false, message: 'Sub admin not found' });
@@ -120,6 +126,11 @@ export const updateSubAdmin = async (req, res) => {
     sub.branchId = branch._id;
     sub.branchName = branch.branchName;
     sub.branchWaLink = branch.waLink;
+  }
+
+  if (typeof waLink === 'string' && waLink.trim().length > 0) {
+    // Allow directly overriding waLink; do not force-attach a branch
+    sub.branchWaLink = waLink.trim();
   }
 
   await sub.save();
