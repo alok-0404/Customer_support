@@ -7,7 +7,7 @@ import mongoose from 'mongoose';
 const UserSchema = new mongoose.Schema(
   {
     userId: { type: String, required: true, unique: true, index: true },
-    branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: function() { return this.role === 'client'; } },
+    branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch' },
     // Denormalized snapshot for clarity/auditing
     branchName: { type: String },
     branchWaLink: { type: String },
