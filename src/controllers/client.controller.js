@@ -48,10 +48,17 @@ export const createClient = async (req, res, next) => {
       .select('_id branchId branchName branchWaLink')
       .populate('branchId');
 
-    if (!subAdmin || !subAdmin.branchId) {
+    if (!subAdmin) {
       return res.status(400).json({
         success: false,
-        message: 'SubAdmin branch information not found'
+        message: 'SubAdmin not found'
+      });
+    }
+    // Allow subadmins without branchId as long as they have a waLink snapshot
+    if (!subAdmin.branchId && !subAdmin.branchWaLink) {
+      return res.status(400).json({
+        success: false,
+        message: 'SubAdmin branch information not found (waLink missing)'
       });
     }
 
@@ -62,9 +69,9 @@ export const createClient = async (req, res, next) => {
       phone: phone || null,
       role: 'client',
       parentSubAdmin: subAdmin._id,
-      branchId: subAdmin.branchId._id,
-      branchName: subAdmin.branchName || subAdmin.branchId.branchName,
-      branchWaLink: subAdmin.branchWaLink || subAdmin.branchId.waLink,
+      ...(subAdmin.branchId ? { branchId: subAdmin.branchId._id } : {}),
+      branchName: subAdmin.branchName || subAdmin.branchId?.branchName || null,
+      branchWaLink: subAdmin.branchWaLink || subAdmin.branchId?.waLink || null,
       isActive: true,
       createdBy: req.user.id
     };
