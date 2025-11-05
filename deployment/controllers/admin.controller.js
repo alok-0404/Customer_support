@@ -15,15 +15,19 @@ const findBranchByAnyId = async (idOrCode) => {
 };
 
 export const createSubAdmin = async (req, res) => {
-  const { email, password, userId, branchId, isActive = true, permissions = [] } = req.body || {};
-  if (!email || !password || !userId || !branchId) {
-    return res.status(400).json({ success: false, message: 'email, password, userId, branchId are required' });
+  const { email, password, userId, branchId, username, isActive = true, permissions = [] } = req.body || {};
+  if (!email || !password || !userId || !branchId || !username) {
+    return res.status(400).json({ success: false, message: 'email, password, userId, branchId, username are required' });
   }
 
   const normalizedEmail = String(email).toLowerCase().trim();
+  const normalizedUsername = String(username).toLowerCase().trim();
 
   const exists = await User.findOne({ email: normalizedEmail });
   if (exists) return res.status(409).json({ success: false, message: 'Email already in use' });
+
+  const usernameExists = await User.findOne({ username: normalizedUsername });
+  if (usernameExists) return res.status(409).json({ success: false, message: 'Username already in use' });
 
   const branch = await findBranchByAnyId(branchId);
   if (!branch) return res.status(400).json({ success: false, message: 'Invalid branchId' });
@@ -32,6 +36,7 @@ export const createSubAdmin = async (req, res) => {
 
   const sub = await User.create({
     userId,
+    username: normalizedUsername,
     branchId: branch._id,
     branchName: branch.branchName,
     branchWaLink: branch.waLink,
@@ -51,6 +56,7 @@ export const createSubAdmin = async (req, res) => {
     data: {
       id: String(sub._id),
       email: sub.email,
+      username: sub.username || null,
       role: sub.role,
       isActive: sub.isActive,
       userId: sub.userId,

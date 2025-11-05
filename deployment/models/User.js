@@ -7,6 +7,8 @@ import mongoose from 'mongoose';
 const UserSchema = new mongoose.Schema(
   {
     userId: { type: String, required: true, unique: true, index: true },
+    // New: optional username for login (unique, case-insensitive)
+    username: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
     branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: function() { return this.role === 'sub' || this.role === 'client'; } },
     // Denormalized snapshot for clarity/auditing
     branchName: { type: String },

@@ -11,14 +11,29 @@ const signAccessToken = (user) => {
 };
 
 export const login = async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ success: false, message: 'Email and password are required' });
+  // Updated: Sub-admins must login with username; Root can continue with email.
+  const { email, identifier, password } = req.body;
+  const rawIdentifier = (identifier || email || '').toString();
+  if (!rawIdentifier || !password) {
+    return res.status(400).json({ success: false, message: 'Username/email and password are required' });
   }
 
-  const user = await User.findOne({ email: email.toLowerCase().trim() });
+  const normalized = rawIdentifier.toLowerCase().trim();
+  // Try username first
+  let user = await User.findOne({ username: normalized });
+  if (!user) {
+    // Fallback to email (for root or legacy accounts). If identifier is an email.
+    if (rawIdentifier.includes('@')) {
+      user = await User.findOne({ email: normalized });
+    }
+  }
   if (!user) return res.status(401).json({ success: false, message: 'Invalid credentials' });
   if (!user.isActive) return res.status(403).json({ success: false, message: 'Account disabled' });
+
+  // Enforce: sub-admins cannot login using email; must use username
+  if (user.role === 'sub' && rawIdentifier.includes('@')) {
+    return res.status(400).json({ success: false, message: 'Sub-admins must login with username' });
+  }
 
   const ok = user.passwordHash && (await bcrypt.compare(password, user.passwordHash));
   if (!ok) return res.status(401).json({ success: false, message: 'Invalid credentials' });
@@ -34,6 +49,7 @@ export const login = async (req, res) => {
       user: {
         id: String(user._id),
         email: user.email,
+        username: user.username || null,
         role: user.role,
         isActive: user.isActive,
         ...(user.role === 'sub' ? {
@@ -50,13 +66,14 @@ export const login = async (req, res) => {
 };
 
 export const me = async (req, res) => {
-  const user = await User.findById(req.user.id).select('_id email role isActive lastLoginAt branchId branchName branchWaLink');
+  const user = await User.findById(req.user.id).select('_id email username role isActive lastLoginAt branchId branchName branchWaLink');
   return res.status(200).json({
     success: true,
     message: 'Profile',
     data: {
       id: String(user._id),
       email: user.email,
+      username: user.username || null,
       role: user.role,
       isActive: user.isActive,
       sessionActive: true,
