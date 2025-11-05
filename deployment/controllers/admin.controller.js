@@ -16,8 +16,8 @@ const findBranchByAnyId = async (idOrCode) => {
 
 export const createSubAdmin = async (req, res) => {
   const { email, password, userId, branchId, username, isActive = true, permissions = [] } = req.body || {};
-  if (!email || !password || !userId || !branchId || !username) {
-    return res.status(400).json({ success: false, message: 'email, password, userId, branchId, username are required' });
+  if (!password || !userId || !branchId || !username) {
+    return res.status(400).json({ success: false, message: 'password, userId, branchId, username are required' });
   }
 
   const normalizedEmail = String(email).toLowerCase().trim();
