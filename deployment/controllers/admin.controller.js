@@ -20,11 +20,13 @@ export const createSubAdmin = async (req, res) => {
     return res.status(400).json({ success: false, message: 'password, userId, branchId, username are required' });
   }
 
-  const normalizedEmail = String(email).toLowerCase().trim();
+  const normalizedEmail = typeof email === 'string' ? email.toLowerCase().trim() : '';
   const normalizedUsername = String(username).toLowerCase().trim();
 
-  const exists = await User.findOne({ email: normalizedEmail });
-  if (exists) return res.status(409).json({ success: false, message: 'Email already in use' });
+  if (normalizedEmail) {
+    const exists = await User.findOne({ email: normalizedEmail });
+    if (exists) return res.status(409).json({ success: false, message: 'Email already in use' });
+  }
 
   const usernameExists = await User.findOne({ username: normalizedUsername });
   if (usernameExists) return res.status(409).json({ success: false, message: 'Username already in use' });
@@ -34,13 +36,12 @@ export const createSubAdmin = async (req, res) => {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  const sub = await User.create({
+  const subPayload = {
     userId,
     username: normalizedUsername,
     branchId: branch._id,
     branchName: branch.branchName,
     branchWaLink: branch.waLink,
-    email: normalizedEmail,
     passwordHash,
     role: 'sub',
     isActive: !!isActive,
@@ -48,7 +49,13 @@ export const createSubAdmin = async (req, res) => {
     tokenVersion: 0,
     // Store permissions if provided
     ...(Array.isArray(permissions) ? { permissions } : {})
-  });
+  };
+
+  if (normalizedEmail) {
+    subPayload.email = normalizedEmail;
+  }
+
+  const sub = await User.create(subPayload);
 
   return res.status(201).json({
     success: true,
