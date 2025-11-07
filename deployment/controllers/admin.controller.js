@@ -89,7 +89,7 @@ export const listSubAdmins = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select('_id email role isActive userId createdBy permissions createdAt updatedAt branchId branchName branchWaLink')
+      .select('_id email username role isActive userId createdBy permissions createdAt updatedAt branchId branchName branchWaLink')
       .populate('branchId'),
     User.countDocuments(filter)
   ]);
@@ -101,6 +101,7 @@ export const listSubAdmins = async (req, res) => {
       items: items.map(u => ({
         id: String(u._id),
         email: u.email,
+        username: u.username || null,
         role: u.role,
         isActive: u.isActive,
         userId: u.userId,
