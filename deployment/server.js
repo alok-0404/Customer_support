@@ -77,6 +77,8 @@ const whitelist = (process.env.CORS_WHITELIST || process.env.CORS_ORIGIN || '')
   .map(s => s.trim())
   .filter(Boolean);
 
+const defaultAllowedHeaders = ['Content-Type', 'Authorization', 'X-Requested-With', 'x-otp-token', 'X-OTP-Token'];
+
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, Postman, or curl)
@@ -112,7 +114,8 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: defaultAllowedHeaders,
+  exposedHeaders: defaultAllowedHeaders
 }));
 
 // Force HTTPS to HTTP redirect for mixed content (if needed)
