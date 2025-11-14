@@ -17,7 +17,6 @@
  * - Graceful error handling
  */
 
-import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -27,7 +26,7 @@ import xss from 'xss-clean';
 import hpp from 'hpp';
 
 // Load environment variables
-dotenv.config();
+import './config/env.js';
 
 // Validate required environment variables
 const requiredEnvVars = ['PORT', 'MONGO_URI', 'JWT_ACCESS_SECRET'];
@@ -49,6 +48,7 @@ import authRoutes from './routes/auth.routes.js';
 import adminsRoutes from './routes/admins.routes.js';
 import clientsRoutes from './routes/clients.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
+import otpRoutes from './routes/otp.routes.js';
 
 // Import middleware
 import { notFound, errorHandler } from './middlewares/error.js';
@@ -137,7 +137,10 @@ app.use(hpp());
 app.use(morgan('tiny'));
 
 // Rate limiting (apply to public APIs)
-app.use(['/search', '/branches', '/users', '/auth/login', '/admins', '/clients'], apiRateLimit);
+app.use(
+  ['/search', '/branches', '/users', '/auth/login', '/admins', '/clients', '/otp/send'],
+  apiRateLimit,
+);
 
 // API Routes (minimal)
 app.use('/search', searchRoutes);
@@ -147,6 +150,7 @@ app.use('/auth', authRoutes);
 app.use('/admins', adminsRoutes);
 app.use('/clients', clientsRoutes);
 app.use('/analytics', analyticsRoutes);
+app.use('/otp', otpRoutes);
 
 // Health endpoint
 app.get('/health', (req, res) => {
