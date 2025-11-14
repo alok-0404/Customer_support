@@ -17,13 +17,24 @@ const shouldForceSpecialLink = (userId) => {
   return FORCE_WA_LINK_FOR_USER_IDS.includes(userId);
 };
 
-export const findUserWithBranch = async (userId) => {
+const normalizePhone = (phone) => (phone ? String(phone).replace(/\s+/g, '').trim() : '');
+
+export const findUserWithBranch = async (userId, options = {}) => {
+  const { requirePhone } = options;
   // Search in database
   const dbUser = await User.findOne({ userId }).populate('branchId');
   
   if (!dbUser) {
     // User not found in database
     return null;
+  }
+
+  if (requirePhone) {
+    const normalizedExpectedPhone = normalizePhone(requirePhone);
+    const normalizedUserPhone = normalizePhone(dbUser.phone);
+    if (!normalizedUserPhone || normalizedUserPhone !== normalizedExpectedPhone) {
+      return null;
+    }
   }
 
   let waLink = '';
@@ -62,8 +73,8 @@ export const findUserWithBranch = async (userId) => {
   };
 };
 
-export const getRedirectWaLink = async (userId) => {
-  const found = await findUserWithBranch(userId);
+export const getRedirectWaLink = async (userId, options = {}) => {
+  const found = await findUserWithBranch(userId, options);
   if (!found) return null;
   return found.waLink;
 };
