@@ -34,8 +34,17 @@ jobs:
         cp -r deployment/ deployment-package/
         cp package*.json deployment-package/
         cp ecosystem.config.cjs deployment-package/
-        # ensure .env present in deployment
-        cp production.env deployment-package/.env
+        # ensure .env present in deployment (check both locations)
+        if [ -f "production.env" ]; then
+          cp production.env deployment-package/.env
+        elif [ -f "deployment/production.env" ]; then
+          cp deployment/production.env deployment-package/.env
+        else
+          echo "Warning: production.env not found, creating template from env.example.txt"
+          if [ -f "env.example.txt" ]; then
+            cp env.example.txt deployment-package/.env
+          fi
+        fi
         tar -czf backend-deployment.tar.gz deployment-package/
     
     - name: Deploy to EC2 via SCP
