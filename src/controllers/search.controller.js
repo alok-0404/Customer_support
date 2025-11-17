@@ -76,10 +76,15 @@ export const startOtpVerification = async (req, res, next) => {
 
     const client = ensureTwilioClient();
     const { verifyServiceSid } = getOtpConfig();
+    
+    // Get channel from request body, default to 'sms'
+    const channel = (req.body?.channel || 'sms').toLowerCase();
+    const allowedChannels = ['sms', 'whatsapp', 'call', 'email'];
+    const finalChannel = allowedChannels.includes(channel) ? channel : 'sms';
 
     await client.verify.v2.services(verifyServiceSid).verifications.create({
       to: phone,
-      channel: 'sms'
+      channel: finalChannel
     });
 
     return res.status(200).json({ success: true, message: 'OTP sent successfully' });
