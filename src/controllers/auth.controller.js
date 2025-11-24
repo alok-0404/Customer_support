@@ -11,23 +11,30 @@ const signAccessToken = (user) => {
 };
 
 export const login = async (req, res) => {
-  // Updated: Sub-admins must login with username; Root can continue with email.
+  // Updated: Sub-admins must login with username; root can continue with email.
   const { email, identifier, password } = req.body;
   const rawIdentifier = (identifier || email || '').toString();
+
   if (!rawIdentifier || !password) {
     return res.status(400).json({ success: false, message: 'Username/email and password are required' });
   }
 
   const normalized = rawIdentifier.toLowerCase().trim();
-  // Try username first
-  let user = await User.findOne({ username: normalized });
-  if (!user) {
-    // Fallback to email (for root or legacy accounts). If identifier is an email.
-    if (rawIdentifier.includes('@')) {
-      user = await User.findOne({ email: normalized });
+
+  let user = null;
+  if (rawIdentifier.includes('@')) {
+    user = await User.findOne({ email: normalized });
+  } else {
+    user = await User.findOne({ username: normalized });
+    if (!user) {
+      user = await User.findOne({ userId: normalized });
     }
   }
+
   if (!user) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+  if (user.role === 'sub' && rawIdentifier.includes('@')) {
+    return res.status(400).json({ success: false, message: 'Sub-admins must login with username' });
+  }
   if (!user.isActive) return res.status(403).json({ success: false, message: 'Account disabled' });
 
   // Enforce: sub-admins cannot login using email; must use username
@@ -116,6 +123,39 @@ export const changePassword = async (req, res) => {
   await user.save();
 
   return res.status(200).json({ success: true, message: 'Password updated. Please login again.' });
+};
+
+export const changeOwnPassword = async (req, res) => {
+  const { currentPassword, newPassword, confirmNewPassword } = req.body;
+  if (!currentPassword || !newPassword || !confirmNewPassword) {
+    return res.status(400).json({ success: false, message: 'Current, new, and confirm password are required' });
+  }
+
+  if (newPassword !== confirmNewPassword) {
+    return res.status(400).json({ success: false, message: 'New password and confirm password must match' });
+  }
+
+  if (newPassword.length < 8) {
+    return res.status(400).json({ success: false, message: 'New password must be at least 8 characters' });
+  }
+
+  const user = await User.findById(req.user.id).select('_id passwordHash tokenVersion role isActive');
+  if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+  if (user.role !== 'sub') return res.status(403).json({ success: false, message: 'Sub-admin access required' });
+  if (!user.isActive) return res.status(403).json({ success: false, message: 'Account disabled' });
+
+  const ok = user.passwordHash && (await bcrypt.compare(currentPassword, user.passwordHash));
+  if (!ok) return res.status(401).json({ success: false, message: 'Invalid current password' });
+
+  if (await bcrypt.compare(newPassword, user.passwordHash)) {
+    return res.status(400).json({ success: false, message: 'New password cannot be same as current password' });
+  }
+
+  user.passwordHash = await bcrypt.hash(newPassword, 12);
+  user.tokenVersion += 1;
+  await user.save();
+
+  return res.status(200).json({ success: true, message: 'Password updated. Please login again with the new password.' });
 };
 
 export const changeEmail = async (req, res) => {

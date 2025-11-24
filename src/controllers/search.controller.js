@@ -5,7 +5,7 @@
 import jwt from 'jsonwebtoken';
 import twilio from 'twilio';
 import User from '../models/User.js';
-import { findUserWithBranch, getRedirectWaLink } from '../services/search.service.js';
+import { findUserWithBranch, getRedirectWaLink, findUserByPhoneWithBranch } from '../services/search.service.js';
 
 const normalizePhone = (phone) => (phone ? String(phone).replace(/\s+/g, '').trim() : '');
 
@@ -49,7 +49,24 @@ const getVerifiedPhoneFromRequest = (req) => {
 
 const formatTwilioError = (error) => {
   if (!error) return 'Failed to process OTP request';
+  
+  // Twilio authentication errors
+  if (error.message && error.message.toLowerCase().includes('authenticate')) {
+    return 'Twilio authentication failed. Please check TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in environment variables.';
+  }
+  
+  // Twilio 401/403 errors
+  if (error.status === 401 || error.status === 403) {
+    return 'Twilio authentication failed. Invalid credentials.';
+  }
+  
+  // Twilio 404 errors (service not found)
+  if (error.status === 404) {
+    return 'Twilio Verify Service not found. Please check TWILIO_VERIFY_SERVICE_SID.';
+  }
+  
   if (error.message) return error.message;
+  if (error.code) return `Twilio error: ${error.code}`;
   return 'Failed to process OTP request';
 };
 export const startOtpVerification = async (req, res, next) => {
@@ -71,10 +88,22 @@ export const startOtpVerification = async (req, res, next) => {
     }
     if (!isOtpServiceConfigured()) {
       res.status(503);
-      return res.json({ success: false, message: 'OTP service not configured' });
+      const config = getOtpConfig();
+      const missing = [];
+      if (!config.accountSid) missing.push('TWILIO_ACCOUNT_SID');
+      if (!config.authToken) missing.push('TWILIO_AUTH_TOKEN');
+      if (!config.verifyServiceSid) missing.push('TWILIO_VERIFY_SERVICE_SID');
+      return res.json({ 
+        success: false, 
+        message: `OTP service not configured. Missing: ${missing.join(', ')}` 
+      });
     }
 
     const client = ensureTwilioClient();
+    if (!client) {
+      res.status(503);
+      return res.json({ success: false, message: 'Failed to initialize Twilio client. Check credentials.' });
+    }
     const { verifyServiceSid } = getOtpConfig();
     
     // Get channel from request body, default to 'sms'
@@ -89,6 +118,14 @@ export const startOtpVerification = async (req, res, next) => {
 
     return res.status(200).json({ success: true, message: 'OTP sent successfully' });
   } catch (error) {
+    // Log error for debugging
+    console.error('❌ OTP Start Error:', {
+      message: error.message,
+      status: error.status,
+      code: error.code,
+      moreInfo: error.moreInfo
+    });
+    
     if (error?.status === 429) {
       res.status(429);
       return res.json({ success: false, message: 'Too many OTP requests. Please try again later.' });
@@ -147,12 +184,25 @@ export const verifyOtpCode = async (req, res, next) => {
       expiresIn: tokenExpiresIn
     });
 
+    // Fetch WhatsApp link and branch info directly using phone
+    const userLinkData = await findUserByPhoneWithBranch(phone);
+    if (!userLinkData || !userLinkData.waLink) {
+      res.status(404);
+      return res.json({
+        success: false,
+        message: 'No active user or WhatsApp link found for this phone number'
+      });
+    }
+
     return res.status(200).json({
       success: true,
-      message: 'OTP verified',
+      message: 'OTP verified. Redirect to WhatsApp link.',
       data: {
         otpToken,
-        expiresIn: tokenExpiresIn
+        expiresIn: tokenExpiresIn,
+        waLink: userLinkData.waLink,
+        userId: userLinkData.userId,
+        branchName: userLinkData.branchName
       }
     });
   } catch (error) {

@@ -26,9 +26,17 @@ if (nodeEnv) {
 
 enqueueIfExists(envFilesToLoad, 'production.env');
 
+// Load environment files (root .env takes priority)
 envFilesToLoad.forEach((filePath) => {
   dotenv.config({ path: filePath, override: true });
 });
+
+// Log which env files were loaded (for debugging)
+if (envFilesToLoad.length > 0) {
+  console.log('📁 Loaded environment files:', envFilesToLoad.map(f => path.basename(f)).join(', '));
+} else {
+  console.log('⚠️ No .env files found in root directory');
+}
 
 export default process.env;
 
