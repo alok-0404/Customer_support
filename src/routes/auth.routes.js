@@ -1,7 +1,7 @@
 import express from 'express';
-import { login, me, logout, changePassword, changeEmail, forgotPassword, resetPassword } from '../controllers/auth.controller.js';
+import { login, me, logout, changePassword, changeOwnPassword, changeEmail, forgotPassword, resetPassword } from '../controllers/auth.controller.js';
 import { apiRateLimit } from '../middlewares/rateLimit.js';
-import { requireAuth, requireRoot } from '../middlewares/auth.js';
+import { requireAuth, requireRoot, requireSubAdmin } from '../middlewares/auth.js';
 
 const router = express.Router();
 
@@ -14,6 +14,7 @@ router.post('/reset-password', apiRateLimit, resetPassword);
 router.get('/me', requireAuth, me);
 router.post('/logout', requireAuth, logout);
 router.post('/change-password', requireAuth, requireRoot, changePassword);
+router.post('/change-password/self', requireAuth, requireSubAdmin, changeOwnPassword);
 router.post('/change-email', requireAuth, requireRoot, changeEmail);
 
 export default router;

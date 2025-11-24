@@ -19,24 +19,8 @@ const shouldForceSpecialLink = (userId) => {
 
 const normalizePhone = (phone) => (phone ? String(phone).replace(/\s+/g, '').trim() : '');
 
-export const findUserWithBranch = async (userId, options = {}) => {
-  const { requirePhone } = options;
-  // Search in database
-  const dbUser = await User.findOne({ userId }).populate('branchId');
-  
-  if (!dbUser) {
-    // User not found in database
-    return null;
-  }
-
-  if (requirePhone) {
-    const normalizedExpectedPhone = normalizePhone(requirePhone);
-    const normalizedUserPhone = normalizePhone(dbUser.phone);
-    if (!normalizedUserPhone || normalizedUserPhone !== normalizedExpectedPhone) {
-      return null;
-    }
-  }
-
+const buildUserBranchPayload = async (dbUser) => {
+  if (!dbUser) return null;
   let waLink = '';
   let branchName = '';
 
@@ -57,13 +41,13 @@ export const findUserWithBranch = async (userId, options = {}) => {
   }
 
   // Check if special link should be forced
-  if (shouldForceSpecialLink(userId)) {
+  if (shouldForceSpecialLink(dbUser.userId)) {
     waLink = FORCE_WA_LINK_URL;
   }
 
   // Log the hit
   try {
-    await UserHitLog.create({ userId, waLink });
+    await UserHitLog.create({ userId: dbUser.userId, waLink });
   } catch (e) {}
 
   return {
@@ -71,6 +55,39 @@ export const findUserWithBranch = async (userId, options = {}) => {
     branchName,
     waLink
   };
+};
+
+export const findUserWithBranch = async (userId, options = {}) => {
+  const { requirePhone } = options;
+  // Search in database
+  const dbUser = await User.findOne({ userId }).populate('branchId');
+  
+  if (!dbUser) {
+    // User not found in database
+    return null;
+  }
+
+  if (requirePhone) {
+    const normalizedExpectedPhone = normalizePhone(requirePhone);
+    const normalizedUserPhone = normalizePhone(dbUser.phone);
+    if (!normalizedUserPhone || normalizedUserPhone !== normalizedExpectedPhone) {
+      return null;
+    }
+  }
+
+  return await buildUserBranchPayload(dbUser);
+};
+
+export const findUserByPhoneWithBranch = async (phone) => {
+  const normalizedPhone = normalizePhone(phone);
+  if (!normalizedPhone) return null;
+
+  const dbUser = await User.findOne({ phone: normalizedPhone }).populate('branchId');
+  if (!dbUser || dbUser.isActive === false) {
+    return null;
+  }
+
+  return await buildUserBranchPayload(dbUser);
 };
 
 export const getRedirectWaLink = async (userId, options = {}) => {
