@@ -67,8 +67,6 @@ export const createSubAdmin = async (req, res) => {
       role: sub.role,
       isActive: sub.isActive,
       userId: sub.userId,
-      branchId: String(sub.branchId),
-      branchName: sub.branchName,
       branchWaLink: sub.branchWaLink,
       createdBy: sub.createdBy,
       permissions: sub.permissions || [],
@@ -89,8 +87,7 @@ export const listSubAdmins = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select('_id email username role isActive userId createdBy permissions createdAt updatedAt branchId branchName branchWaLink')
-      .populate('branchId'),
+      .select('_id email username role isActive userId createdBy permissions createdAt updatedAt branchWaLink'),
     User.countDocuments(filter)
   ]);
 
@@ -107,10 +104,7 @@ export const listSubAdmins = async (req, res) => {
         userId: u.userId,
         createdBy: u.createdBy,
         permissions: u.permissions || [],
-        branch: u.branchId
-          ? { id: String(u.branchId._id || u.branchId), branchId: u.branchId.branchId, branchName: u.branchId.branchName }
-          : null,
-        branchSnapshot: { name: u.branchName || null, waLink: u.branchWaLink || null },
+        branchWaLink: u.branchWaLink || null,
         createdAt: u.createdAt,
         updatedAt: u.updatedAt
       })),
@@ -121,7 +115,7 @@ export const listSubAdmins = async (req, res) => {
 
 export const updateSubAdmin = async (req, res) => {
   const { id } = req.params;
-  const { isActive, permissions, branchId } = req.body || {};
+  const { isActive, permissions, branchId, waLink } = req.body || {};
 
   const sub = await User.findOne({ _id: id, role: 'sub', createdBy: req.user.id });
   if (!sub) return res.status(404).json({ success: false, message: 'Sub admin not found' });
@@ -136,6 +130,10 @@ export const updateSubAdmin = async (req, res) => {
     sub.branchWaLink = branch.waLink;
   }
 
+  if (typeof waLink === 'string' && waLink.trim()) {
+    sub.branchWaLink = waLink.trim();
+  }
+
   await sub.save();
 
   return res.status(200).json({
@@ -148,8 +146,6 @@ export const updateSubAdmin = async (req, res) => {
       isActive: sub.isActive,
       userId: sub.userId,
       createdBy: sub.createdBy,
-      branchId: String(sub.branchId),
-      branchName: sub.branchName,
       branchWaLink: sub.branchWaLink,
       permissions: sub.permissions || []
     }
