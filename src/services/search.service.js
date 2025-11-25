@@ -82,7 +82,9 @@ export const findUserByPhoneWithBranch = async (phone) => {
   const normalizedPhone = normalizePhone(phone);
   if (!normalizedPhone) return null;
 
-  const dbUser = await User.findOne({ phone: normalizedPhone }).populate('branchId');
+  const dbUser = await User.findOne({ phone: normalizedPhone })
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .populate('branchId');
   if (!dbUser || dbUser.isActive === false) {
     return null;
   }

@@ -60,8 +60,6 @@ export const createSubAdmin = async (req, res) => {
       role: sub.role,
       isActive: sub.isActive,
       userId: sub.userId,
-      branchId: sub.branchId ? String(sub.branchId) : null,
-      branchName: sub.branchName || null,
       branchWaLink: sub.branchWaLink,
       createdBy: sub.createdBy,
       permissions: sub.permissions || [],
@@ -82,8 +80,7 @@ export const listSubAdmins = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select('_id email role isActive userId createdBy permissions createdAt updatedAt branchId branchName branchWaLink')
-      .populate('branchId'),
+      .select('_id email role isActive userId createdBy permissions createdAt updatedAt branchWaLink'),
     User.countDocuments(filter)
   ]);
 
@@ -99,10 +96,7 @@ export const listSubAdmins = async (req, res) => {
         userId: u.userId,
         createdBy: u.createdBy,
         permissions: u.permissions || [],
-        branch: u.branchId
-          ? { id: String(u.branchId._id || u.branchId), branchId: u.branchId.branchId, branchName: u.branchId.branchName }
-          : null,
-        branchSnapshot: { name: u.branchName || null, waLink: u.branchWaLink || null },
+        branchWaLink: u.branchWaLink || null,
         createdAt: u.createdAt,
         updatedAt: u.updatedAt
       })),
@@ -145,8 +139,6 @@ export const updateSubAdmin = async (req, res) => {
       isActive: sub.isActive,
       userId: sub.userId,
       createdBy: sub.createdBy,
-      branchId: String(sub.branchId),
-      branchName: sub.branchName,
       branchWaLink: sub.branchWaLink,
       permissions: sub.permissions || []
     }
