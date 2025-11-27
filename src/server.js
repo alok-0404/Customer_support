@@ -193,10 +193,12 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`⏰ Started at: ${new Date().toISOString()}`);
   
-  if (process.env.EMAIL_HOST || process.env.SMTP_HOST) {
-    console.log('📧 Email notifications enabled');
+  const emailConfigured = !!(process.env.SENDGRID_API_KEY || process.env.EMAIL_HOST || process.env.SMTP_HOST);
+  if (emailConfigured) {
+    const via = process.env.SENDGRID_API_KEY ? 'SendGrid API' : 'SMTP';
+    console.log(`📧 Email notifications enabled via ${via}`);
   } else {
-    console.log('📧 Email notifications disabled (EMAIL_HOST not configured)');
+    console.log('📧 Email notifications disabled (SendGrid/SMTP not configured)');
   }
 });
 

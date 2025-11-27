@@ -1,23 +1,25 @@
+import '../config/env.js';
+
 /**
  * Email Service - For sending Password Reset Emails
- * Uses nodemailer
+ * Uses SendGrid REST API
  */
 
-import { createTransport } from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 
-// Email transporter configuration
-const getTransporter = () => {
-  // For production, use real SMTP credentials (Gmail, SendGrid, etc.)
-  return createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.EMAIL_PORT || '587'),
-    secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
-    auth: {
-      user: process.env.EMAIL_USER, // Your email
-      pass: process.env.EMAIL_PASSWORD // Your email password or app-specific password
-    }
-  });
-};
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+const getFromEmail = () =>
+  process.env.SENDGRID_FROM_EMAIL ||
+  process.env.EMAIL_FROM ||
+  process.env.EMAIL_USER;
+const getFromName = () =>
+  process.env.SENDGRID_FROM_NAME ||
+  process.env.APP_NAME ||
+  'Customer Support';
+
+if (SENDGRID_API_KEY) {
+  sgMail.setApiKey(SENDGRID_API_KEY);
+}
 
 /**
  * Sends password reset email to user
@@ -27,17 +29,26 @@ const getTransporter = () => {
  */
 export const sendPasswordResetEmail = async (email, resetToken, userName = 'User') => {
   try {
-    const transporter = getTransporter();
+    if (!SENDGRID_API_KEY) {
+      throw new Error('SendGrid API key not configured');
+    }
+
+    const fromEmail = getFromEmail();
+    if (!fromEmail) {
+      throw new Error('SendGrid from email not configured');
+    }
 
     // Frontend URL where reset form is located
     const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3000';
     const resetLink = `${frontendURL}/reset-password?token=${resetToken}`;
 
     // Email content - Professional English format
-    const fromEmail = process.env.EMAIL_FROM || process.env.EMAIL_USER;
-    const mailOptions = {
-      from: `"${process.env.APP_NAME || 'Customer Support'}" <${fromEmail}>`,
+    const msg = {
       to: email,
+      from: {
+        email: fromEmail,
+        name: getFromName()
+      },
       subject: 'Password Reset Request',
       html: `
         <!DOCTYPE html>
@@ -153,12 +164,14 @@ ${process.env.APP_NAME || 'Customer Support'} Team
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('📧 Password reset email sent:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    const [response] = await sgMail.send(msg);
+    const messageId = response?.headers?.['x-message-id'] || response?.headers?.['X-Message-Id'];
+    console.log('📧 Password reset email sent via SendGrid:', messageId || 'unknown');
+    return { success: true, messageId: messageId || null };
 
   } catch (error) {
     console.error('❌ Error sending email:', error);
+    console.error('❌ SendGrid error payload:', error.response?.body);
     throw new Error('Email sending failed: ' + error.message);
   }
 };
@@ -168,12 +181,17 @@ ${process.env.APP_NAME || 'Customer Support'} Team
  */
 export const testEmailConnection = async () => {
   try {
-    const transporter = getTransporter();
-    await transporter.verify();
-    console.log('✅ Email server connection successful');
+    if (!SENDGRID_API_KEY) {
+      throw new Error('SendGrid API key not configured');
+    }
+    const { body } = await sgMail.client.request({
+      method: 'GET',
+      url: '/v3/user/profile'
+    });
+    console.log('✅ SendGrid connection successful for user:', body?.email || 'unknown');
     return true;
   } catch (error) {
-    console.error('❌ Email server connection failed:', error);
+    console.error('❌ SendGrid connection failed:', error);
     return false;
   }
 };
