@@ -59,7 +59,7 @@ module.exports = {
       EMAIL_USER: 'apikey',
       EMAIL_PASSWORD: 'SG.your-sendgrid-api-key-here',
       EMAIL_FROM: 'your-verified-email@gmail.com',
-      FRONTEND_URL: 'http://admin-customer-support-frontend-2025.s3-website-us-east-1.amazonaws.com'
+      FRONTEND_URL: 'https://mydiamond99adminsupport.in'
     },
     error_file: './logs/err.log',
     out_file: './logs/out.log',
