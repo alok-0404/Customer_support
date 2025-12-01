@@ -72,10 +72,19 @@ app.use(helmet({
 }));
 
 // CORS middleware with flexible origin support
-const whitelist = (process.env.CORS_WHITELIST || process.env.CORS_ORIGIN || '')
+// Base whitelist from environment variables
+const envWhitelist = (process.env.CORS_WHITELIST || process.env.CORS_ORIGIN || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
+
+// In development, always allow local frontend on port 3000 by default
+const devWhitelist = process.env.NODE_ENV === 'development'
+  ? ['http://localhost:3000']
+  : [];
+
+// Merge and de-duplicate
+const whitelist = Array.from(new Set([...envWhitelist, ...devWhitelist]));
 
 const defaultAllowedHeaders = ['Content-Type', 'Authorization', 'X-Requested-With', 'x-otp-token', 'X-OTP-Token'];
 
