@@ -39,7 +39,8 @@ export const sendPasswordResetEmail = async (email, resetToken, userName = 'User
     }
 
     // Frontend URL where reset form is located
-    const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3000' || 'http://mydiamond99adminsupport.in.s3-website-us-east-1.amazonaws.com';
+    console.log('frontendURL', frontendURL);
     const resetLink = `${frontendURL}/#/reset-password?token=${resetToken}`;
 
     // Email content - Simple HTML to reduce spam flags
