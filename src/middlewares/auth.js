@@ -64,11 +64,19 @@ export const verifyClientOwnership = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Client ID is required' });
     }
 
-    const client = await User.findOne({
+    // Build query based on user role
+    const query = {
       _id: clientId,
-      role: 'client',
-      parentSubAdmin: req.user.id
-    });
+      role: 'client'
+    };
+
+    // SubAdmin can only access their own clients, Root can access any client
+    if (req.user.role === 'sub') {
+      query.parentSubAdmin = req.user.id;
+    }
+    // For root users, no parentSubAdmin filter - they can access any client
+
+    const client = await User.findOne(query);
 
     if (!client) {
       return res.status(404).json({
