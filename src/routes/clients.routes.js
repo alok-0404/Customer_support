@@ -21,14 +21,14 @@ router.post('/create', requireSubAdmin, clientController.createClient);
 // List clients (SubAdmin: own clients, Root: all clients)
 router.get('/', requireSubAdminOrRoot, clientController.listMyClients);
 
-// Get specific client (only if belongs to current SubAdmin)
-router.get('/:clientId', requireSubAdmin, verifyClientOwnership, clientController.getClient);
+// Get specific client (SubAdmin: own clients, Root: all clients)
+router.get('/:clientId', requireSubAdminOrRoot, verifyClientOwnership, clientController.getClient);
 
-// Update client (only if belongs to current SubAdmin)
-router.put('/:clientId', requireSubAdmin, verifyClientOwnership, clientController.updateClient);
+// Update client (SubAdmin: own clients, Root: all clients)
+router.put('/:clientId', requireSubAdminOrRoot, verifyClientOwnership, clientController.updateClient);
 
-// Delete/deactivate client (only if belongs to current SubAdmin)
-router.delete('/:clientId', requireSubAdmin, verifyClientOwnership, clientController.deleteClient);
+// Delete/deactivate client (SubAdmin: own clients, Root: all clients)
+router.delete('/:clientId', requireSubAdminOrRoot, verifyClientOwnership, clientController.deleteClient);
 
 // Reset client password (only if belongs to current SubAdmin)
 router.post('/:clientId/reset-password', requireSubAdmin, verifyClientOwnership, clientController.resetClientPassword);
