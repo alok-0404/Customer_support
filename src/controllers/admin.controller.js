@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Branch from '../models/Branch.js';
+import UserHitLog from '../models/UserHitLog.js';
 
 const findBranchByAnyId = async (idOrCode) => {
   if (!idOrCode) return null;
@@ -184,6 +185,68 @@ export const deactivateSubAdmin = async (req, res) => {
   await sub.save();
 
   return res.status(200).json({ success: true, message: 'Sub admin deactivated' });
+};
+
+/**
+ * Bulk delete by role - Delete all users with specified role
+ * Root users are ALWAYS protected and cannot be deleted
+ * POST /api/admins/bulk-delete
+ * Body: { "role": "sub" | "client", "deleteBranches": true/false, "deleteLogs": true/false }
+ */
+export const bulkDeleteByRole = async (req, res) => {
+  try {
+    const { role, deleteBranches = false, deleteLogs = false } = req.body || {};
+
+    // Validate role
+    if (!role || (role !== 'sub' && role !== 'client')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role. Must be "sub" or "client". Root users cannot be deleted.'
+      });
+    }
+
+    let deletedCount = 0;
+    let deletedBranches = 0;
+    let deletedLogs = 0;
+
+    // Delete users with specified role
+    // Root users are protected - only 'sub' or 'client' can be passed
+    const deleteResult = await User.deleteMany({
+      role: role
+    });
+    
+    deletedCount = deleteResult.deletedCount;
+
+    // If deleting sub-admins, optionally delete branches
+    if (role === 'sub' && deleteBranches) {
+      const branchResult = await Branch.deleteMany({});
+      deletedBranches = branchResult.deletedCount;
+    }
+
+    // Optionally delete all user hit logs
+    if (deleteLogs) {
+      const logResult = await UserHitLog.deleteMany({});
+      deletedLogs = logResult.deletedCount;
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Successfully deleted ${deletedCount} ${role} user(s)`,
+      data: {
+        deletedUsers: deletedCount,
+        deletedBranches: deleteBranches ? deletedBranches : 0,
+        deletedLogs: deleteLogs ? deletedLogs : 0,
+        role: role
+      }
+    });
+  } catch (error) {
+    console.error('Bulk delete error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete users',
+      error: error.message
+    });
+  }
 };
 
 

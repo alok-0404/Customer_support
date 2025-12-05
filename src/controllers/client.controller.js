@@ -240,30 +240,37 @@ export const getClient = async (req, res, next) => {
  */
 export const updateClient = async (req, res, next) => {
   try {
-    const { name, email, phone, isActive } = req.body;
+    const { userId, phone } = req.body;
     const client = req.client; // Set by verifyClientOwnership middleware
 
-    // Update fields
-    if (name !== undefined) client.name = name;
-    if (phone !== undefined) client.phone = phone;
-    if (typeof isActive === 'boolean') client.isActive = isActive;
-
-    // Handle email update
-    if (email !== undefined) {
-      const normalizedEmail = String(email).toLowerCase().trim();
-      if (normalizedEmail !== client.email) {
-        const emailExists = await User.findOne({
-          email: normalizedEmail,
+    // Handle userId update
+    if (userId !== undefined) {
+      const trimmedUserId = String(userId).trim();
+      if (trimmedUserId.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'userId cannot be empty'
+        });
+      }
+      if (trimmedUserId !== client.userId) {
+        // Check if userId already exists
+        const userIdExists = await User.findOne({
+          userId: trimmedUserId,
           _id: { $ne: client._id }
         });
-        if (emailExists) {
+        if (userIdExists) {
           return res.status(409).json({
             success: false,
-            message: 'Email already in use'
+            message: 'userId already in use'
           });
         }
-        client.email = normalizedEmail;
+        client.userId = trimmedUserId;
       }
+    }
+
+    // Update phone field
+    if (phone !== undefined) {
+      client.phone = phone;
     }
 
     await client.save();
