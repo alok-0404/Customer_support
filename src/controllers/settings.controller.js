@@ -169,37 +169,61 @@ export const getUniversalWaLinkHistory = async (req, res, next) => {
 
 
 /**
- * Get current banner (Public - for frontend)
+ * Get current banners (Public - for frontend carousel)
  * GET /settings/banner
+ * Returns array of active banners sorted by order
  */
 export const getCurrentBanner = async (req, res, next) => {
   try {
     let settings = await AppSettings.findOne({ settingKey: 'app_settings' });
-    
-    // If settings don't exist, return null
-    if (!settings || !settings.currentBanner) {
+
+    // If settings don't exist or no active banners, return empty array
+    if (!settings || !settings.activeBanners || settings.activeBanners.length === 0) {
+      // Backward compatibility: check old currentBanner field
+      if (settings && settings.currentBanner) {
+        return res.status(200).json({
+          success: true,
+          message: 'Banners fetched successfully',
+          data: {
+            banners: [{
+              id: 'legacy',
+              bannerUrl: settings.currentBanner,
+              bannerType: settings.bannerType || 'custom',
+              title: settings.bannerTitle || null,
+              description: settings.bannerDescription || null,
+              order: 0
+            }]
+          }
+        });
+      }
+
       return res.status(200).json({
         success: true,
-        message: 'Banner fetched successfully',
+        message: 'Banners fetched successfully',
         data: {
-          bannerUrl: null,
-          bannerType: null,
-          title: null,
-          description: null,
-          updatedAt: null
+          banners: []
         }
       });
     }
 
+    // Sort banners by order and limit to 3 for carousel
+    const banners = settings.activeBanners
+      .sort((a, b) => a.order - b.order)
+      .slice(0, 3) // Max 3 banners for carousel
+      .map(banner => ({
+        id: String(banner._id),
+        bannerUrl: banner.bannerUrl,
+        bannerType: banner.bannerType || 'custom',
+        title: banner.title || null,
+        description: banner.description || null,
+        order: banner.order
+      }));
+
     return res.status(200).json({
       success: true,
-      message: 'Banner fetched successfully',
+      message: 'Banners fetched successfully',
       data: {
-        bannerUrl: settings.currentBanner,
-        bannerType: settings.bannerType || 'custom',
-        title: settings.bannerTitle || null,
-        description: settings.bannerDescription || null,
-        updatedAt: settings.updatedAt
+        banners: banners
       }
     });
   } catch (error) {
@@ -208,12 +232,13 @@ export const getCurrentBanner = async (req, res, next) => {
 };
 
 /**
- * Upload/Update banner (Root only)
+ * Upload banner (Root only)
  * POST /admins/settings/banner
+ * Adds a new banner to activeBanners array
  */
 export const uploadBanner = async (req, res, next) => {
   try {
-    const { bannerType = 'custom', title, description } = req.body;
+    const { bannerType = 'custom', title, description, order } = req.body;
     const file = req.file;
 
     // Validate file
@@ -249,43 +274,64 @@ export const uploadBanner = async (req, res, next) => {
         settingKey: 'app_settings',
         universalWaLink: 'https://wa.me/919999999999?text=Hello',
         waLinkHistory: [],
-        currentBanner: uploadResult.url,
-        bannerType: bannerType,
-        bannerTitle: title || null,
-        bannerDescription: description || null,
+        activeBanners: [],
         bannerHistory: []
       });
-    } else {
-      // Save old banner to history before updating
-      if (settings.currentBanner && settings.currentBanner !== uploadResult.url) {
-        settings.bannerHistory.push({
-          bannerUrl: settings.currentBanner,
-          bannerType: settings.bannerType || 'custom',
-          title: settings.bannerTitle || null,
-          description: settings.bannerDescription || null,
-          changedBy: req.user.id,
-          changedAt: new Date()
-        });
-      }
-
-      // Update current banner
-      settings.currentBanner = uploadResult.url;
-      settings.bannerType = bannerType;
-      settings.bannerTitle = title || null;
-      settings.bannerDescription = description || null;
-      await settings.save();
     }
+
+    // Determine order (if not provided, add at the end)
+    let bannerOrder = order !== undefined ? parseInt(order) : 0;
+    if (order === undefined && settings.activeBanners && settings.activeBanners.length > 0) {
+      const maxOrder = Math.max(...settings.activeBanners.map(b => b.order || 0));
+      bannerOrder = maxOrder + 1;
+    }
+
+    // Limit to max 3 banners - if already 3, remove oldest one
+    if (settings.activeBanners && settings.activeBanners.length >= 3) {
+      // Remove banner with highest order (oldest)
+      settings.activeBanners.sort((a, b) => b.order - a.order);
+      settings.activeBanners.pop(); // Remove last one
+    }
+
+    // Add new banner to activeBanners array
+    const newBanner = {
+      bannerUrl: uploadResult.url,
+      bannerType: bannerType,
+      title: title || null,
+      description: description || null,
+      order: bannerOrder,
+      uploadedBy: req.user.id,
+      uploadedAt: new Date()
+    };
+
+    settings.activeBanners.push(newBanner);
+
+    // Save to history
+    settings.bannerHistory.push({
+      bannerUrl: uploadResult.url,
+      bannerType: bannerType,
+      title: title || null,
+      description: description || null,
+      changedBy: req.user.id,
+      changedAt: new Date()
+    });
+
+    await settings.save();
+
+    // Get the saved banner with ID
+    const savedBanner = settings.activeBanners[settings.activeBanners.length - 1];
 
     return res.status(200).json({
       success: true,
       message: 'Banner uploaded successfully',
       data: {
+        id: String(savedBanner._id),
         bannerUrl: uploadResult.url,
         bannerType: bannerType,
         title: title || null,
         description: description || null,
-        updatedAt: settings.updatedAt,
-        updatedBy: req.user.id
+        order: bannerOrder,
+        uploadedAt: savedBanner.uploadedAt
       }
     });
   } catch (error) {
@@ -369,48 +415,127 @@ export const getBannerHistory = async (req, res, next) => {
 };
 
 /**
- * Delete/Remove current banner (Root only)
- * DELETE /admins/settings/banner
+ * Delete specific banner (Root only)
+ * DELETE /admins/settings/banner/:bannerId
  */
 export const deleteCurrentBanner = async (req, res, next) => {
   try {
-    const settings = await AppSettings.findOne({ settingKey: 'app_settings' });
+    const { bannerId } = req.params;
 
-    if (!settings || !settings.currentBanner) {
-      return res.status(404).json({
+    if (!bannerId) {
+      return res.status(400).json({
         success: false,
-        message: 'No banner found to delete'
+        message: 'Banner ID is required'
       });
     }
 
-    // Save to history before deleting
-    settings.bannerHistory.push({
-      bannerUrl: settings.currentBanner,
-      bannerType: settings.bannerType || 'custom',
-      title: settings.bannerTitle || null,
-      description: settings.bannerDescription || null,
-      changedBy: req.user.id,
-      changedAt: new Date()
-    });
+    const settings = await AppSettings.findOne({ settingKey: 'app_settings' });
+
+    if (!settings || !settings.activeBanners || settings.activeBanners.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No banners found'
+      });
+    }
+
+    // Find banner to delete
+    const bannerIndex = settings.activeBanners.findIndex(
+      banner => String(banner._id) === bannerId
+    );
+
+    if (bannerIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Banner not found'
+      });
+    }
+
+    const bannerToDelete = settings.activeBanners[bannerIndex];
 
     // Optionally delete from S3 (optional - keep for history)
-    // await deleteBannerFromS3(settings.currentBanner);
+    // await deleteBannerFromS3(bannerToDelete.bannerUrl);
 
-    // Clear current banner
-    settings.currentBanner = null;
-    settings.bannerType = 'custom';
-    settings.bannerTitle = null;
-    settings.bannerDescription = null;
+    // Remove from activeBanners array
+    settings.activeBanners.splice(bannerIndex, 1);
+
     await settings.save();
 
     return res.status(200).json({
       success: true,
-      message: 'Banner removed successfully',
+      message: 'Banner deleted successfully',
       data: {
-        removedAt: new Date()
+        deletedBannerId: bannerId,
+        deletedAt: new Date()
       }
     });
   } catch (error) {
     next(error);
   }
 };
+
+/**
+ * Reorder banners (Root only)
+ * PUT /admins/settings/banner/reorder
+ * Body: { bannerOrders: [{ bannerId: "...", order: 0 }, ...] }
+ */
+export const reorderBanners = async (req, res, next) => {
+  try {
+    const { bannerOrders } = req.body;
+
+    if (!Array.isArray(bannerOrders) || bannerOrders.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'bannerOrders array is required with bannerId and order'
+      });
+    }
+
+    const settings = await AppSettings.findOne({ settingKey: 'app_settings' });
+
+    if (!settings || !settings.activeBanners || settings.activeBanners.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No banners found'
+      });
+    }
+
+    // Update order for each banner
+    bannerOrders.forEach(({ bannerId, order }) => {
+      if (bannerId === undefined || order === undefined) {
+        return;
+      }
+
+      const banner = settings.activeBanners.find(
+        b => String(b._id) === bannerId
+      );
+
+      if (banner) {
+        banner.order = parseInt(order);
+      }
+    });
+
+    await settings.save();
+
+    // Return updated banners sorted by order
+    const sortedBanners = settings.activeBanners
+      .sort((a, b) => a.order - b.order)
+      .map(banner => ({
+        id: String(banner._id),
+        bannerUrl: banner.bannerUrl,
+        bannerType: banner.bannerType || 'custom',
+        title: banner.title || null,
+        description: banner.description || null,
+        order: banner.order
+      }));
+
+    return res.status(200).json({
+      success: true,
+      message: 'Banners reordered successfully',
+      data: {
+        banners: sortedBanners
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
