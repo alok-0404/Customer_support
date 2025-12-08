@@ -288,9 +288,16 @@ export const uploadBanner = async (req, res, next) => {
 
     // Limit to max 3 banners - if already 3, remove oldest one
     if (settings.activeBanners && settings.activeBanners.length >= 3) {
-      // Remove banner with highest order (oldest)
-      settings.activeBanners.sort((a, b) => b.order - a.order);
-      settings.activeBanners.pop(); // Remove last one
+      // Find and remove banner with lowest order (oldest)
+      // Use findIndex to avoid mutating array order
+      const sortedCopy = [...settings.activeBanners].sort((a, b) => a.order - b.order);
+      const bannerToRemove = sortedCopy[0]; // Lowest order banner (oldest)
+      const indexToRemove = settings.activeBanners.findIndex(
+        b => String(b._id) === String(bannerToRemove._id)
+      );
+      if (indexToRemove !== -1) {
+        settings.activeBanners.splice(indexToRemove, 1);
+      }
     }
 
     // Add new banner to activeBanners array
