@@ -20,6 +20,17 @@ const BannerHistorySchema = new mongoose.Schema({
   changedAt: { type: Date, default: Date.now }
 }, { _id: true });
 
+// Banner Schema (for carousel - unlimited banners)
+const ActiveBannerSchema = new mongoose.Schema({
+  bannerUrl: { type: String, required: true },
+  bannerType: { type: String, enum: ['festival', 'discount', 'custom', 'event'], default: 'custom' },
+  title: { type: String },
+  description: { type: String },
+  order: { type: Number, required: true, default: 0 }, // For sorting in carousel
+  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  uploadedAt: { type: Date, default: Date.now }
+}, { _id: true });
+
 const AppSettingsSchema = new mongoose.Schema(
   {
     // Unique identifier for settings document (only one document)
@@ -37,7 +48,7 @@ const AppSettingsSchema = new mongoose.Schema(
     },
     // History of all WhatsApp links (with timestamps)
     waLinkHistory: [WaLinkHistorySchema],
-    // Current banner image URL (stored in S3)
+    // Current banner image URL (stored in S3) - DEPRECATED: Use activeBanners instead
     currentBanner: {
       type: String,
       default: null
@@ -49,6 +60,8 @@ const AppSettingsSchema = new mongoose.Schema(
     },
     bannerTitle: { type: String },
     bannerDescription: { type: String },
+    // Active banners for carousel (unlimited banners with order)
+    activeBanners: [ActiveBannerSchema],
     // History of all banners (with timestamps)
     bannerHistory: [BannerHistorySchema]
   },
