@@ -206,10 +206,9 @@ export const getCurrentBanner = async (req, res, next) => {
       });
     }
 
-    // Sort banners by order and limit to 3 for carousel
+    // Sort banners by order (frontend will decide how many to show)
     const banners = settings.activeBanners
       .sort((a, b) => a.order - b.order)
-      .slice(0, 3) // Max 3 banners for carousel
       .map(banner => ({
         id: String(banner._id),
         bannerUrl: banner.bannerUrl,
@@ -286,19 +285,7 @@ export const uploadBanner = async (req, res, next) => {
       bannerOrder = maxOrder + 1;
     }
 
-    // Limit to max 3 banners - if already 3, remove oldest one
-    if (settings.activeBanners && settings.activeBanners.length >= 3) {
-      // Find and remove banner with lowest order (oldest)
-      // Use findIndex to avoid mutating array order
-      const sortedCopy = [...settings.activeBanners].sort((a, b) => a.order - b.order);
-      const bannerToRemove = sortedCopy[0]; // Lowest order banner (oldest)
-      const indexToRemove = settings.activeBanners.findIndex(
-        b => String(b._id) === String(bannerToRemove._id)
-      );
-      if (indexToRemove !== -1) {
-        settings.activeBanners.splice(indexToRemove, 1);
-      }
-    }
+    // No limit on banners - admin can add unlimited banners
 
     // Add new banner to activeBanners array
     const newBanner = {

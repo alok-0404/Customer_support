@@ -20,7 +20,7 @@ const BannerHistorySchema = new mongoose.Schema({
   changedAt: { type: Date, default: Date.now }
 }, { _id: true });
 
-// Banner Schema (for carousel - max 3 banners)
+// Banner Schema (for carousel - unlimited banners)
 const ActiveBannerSchema = new mongoose.Schema({
   bannerUrl: { type: String, required: true },
   bannerType: { type: String, enum: ['festival', 'discount', 'custom', 'event'], default: 'custom' },
@@ -60,7 +60,7 @@ const AppSettingsSchema = new mongoose.Schema(
     },
     bannerTitle: { type: String },
     bannerDescription: { type: String },
-    // Active banners for carousel (multiple banners with order)
+    // Active banners for carousel (unlimited banners with order)
     activeBanners: [ActiveBannerSchema],
     // History of all banners (with timestamps)
     bannerHistory: [BannerHistorySchema]
